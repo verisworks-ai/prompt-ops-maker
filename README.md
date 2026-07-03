@@ -46,6 +46,7 @@ Input                    Output
 ────────────────────────────────────────────────────────────────────────────
 Project YAML config      A project-aware agent prompt
 Type preset              An ad-hoc agent prompt without a project config
+Existing prompt file     Reverse-analysis for missing ops boundaries
 Task description         Concrete objective and risk focus
 Target AI                Claude / Codex / Hermes / MCP / Gemini / generic guidance
 Runtime environment      local / mcp / discord / ci / browser / api instructions
@@ -102,6 +103,23 @@ prompt-ops-maker make-adhoc \
   --target-ai hermes \
   --environment mcp \
   --dry-run
+```
+
+### Analyze an existing prompt
+
+```bash
+prompt-ops-maker analyze \
+  --input existing-prompt.txt \
+  --format text
+```
+
+This reverse-analysis mode uses deterministic local checks only. It does not call an AI model, does not infer private infrastructure, and does not echo detected secret values. It reports missing execution boundaries, deny lists, verification gates, unverified-item handling, and evidence-first reporting.
+
+Structured output is available for automation:
+
+```bash
+prompt-ops-maker analyze --input existing-prompt.txt --format json --output analysis.json
+prompt-ops-maker analyze --input existing-prompt.txt --format yaml --output analysis.yaml
 ```
 
 ### Save a prompt file
@@ -288,7 +306,7 @@ prompt-ops-maker/
 │       ├── automation-pipeline.yaml
 │       ├── web-public.yaml
 │       └── mobile-miniapp.yaml
-├── tests/test_prompt_maker.py   ← CLI and prompt regression tests
+├── tests/test_prompt_maker.py   ← CLI, prompt, and analyzer regression tests
 ├── service-ontology.json        ← optional service ontology manifest
 ├── examples/README.md
 └── docs/ontology-notes/README.md
@@ -301,6 +319,7 @@ python3 -m pytest -q
 python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
 python3 prompt_ops_maker.py make --project brand-hub --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
+python3 prompt_ops_maker.py analyze --input README.md --format json
 ```
 
 Current release smoke:

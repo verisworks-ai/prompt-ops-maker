@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import sys
 import textwrap
 from pathlib import Path
@@ -32,6 +33,53 @@ REPORT_SECTIONS = [
     "적용 전 필요한 승인",
     "다음 실행안",
 ]
+
+ANALYZE_CHECKS = [
+    {
+        "id": "execution_boundary",
+        "label": "Execution boundary",
+        "severity": "BLOCKER",
+        "needles": ["승인", "approval", "do not", "하지 말", "수정", "배포", "upload", "deploy"],
+        "recommendation": "State what the agent must not change before explicit approval: files, DB, deploy, uploads, accounts, and paid APIs.",
+    },
+    {
+        "id": "deny_list",
+        "label": "Deny list",
+        "severity": "HIGH",
+        "needles": ["금지", "deny", "forbidden", "must not", "secret", "개인정보", "환경변수"],
+        "recommendation": "Add a short deny list for secret output, unrelated edits, destructive commands, private routes, and credential values.",
+    },
+    {
+        "id": "verification_gates",
+        "label": "Verification gates",
+        "severity": "HIGH",
+        "needles": ["검증", "test", "pytest", "build", "smoke", "curl", "evidence", "확인"],
+        "recommendation": "List the exact evidence required before completion: tests, build, file diff, HTTP smoke, logs, or MCP tool output.",
+    },
+    {
+        "id": "unverified_reporting",
+        "label": "Unverified item reporting",
+        "severity": "MEDIUM",
+        "needles": ["미검증", "unverified", "unknown", "not verified", "assumption", "가정"],
+        "recommendation": "Require unverified items and assumptions to be reported separately from completed work.",
+    },
+    {
+        "id": "evidence_first_report",
+        "label": "Evidence-first report format",
+        "severity": "MEDIUM",
+        "needles": ["결론", "확인한 증거", "evidence", "result", "BLOCKER", "HIGH", "LOW"],
+        "recommendation": "Define a result-first report shape with conclusion, evidence, blockers, risks, and next actions.",
+    },
+    {
+        "id": "tool_result_grounding",
+        "label": "Tool-result grounding",
+        "severity": "MEDIUM",
+        "needles": ["도구", "tool", "command output", "명령", "파일", "source", "log"],
+        "recommendation": "Require claims to be grounded in files, command output, logs, URL responses, screenshots, or tool results.",
+    },
+]
+
+SEVERITY_PENALTY = {"BLOCKER": 30, "HIGH": 18, "MEDIUM": 10, "LOW": 5}
 
 MODE_PURPOSES = {
     "audit": "현재 상태를 평가하고 출시·운영 리스크를 우선순위별로 정리해줘.",
@@ -213,6 +261,111 @@ def numbered(items: list[str]) -> str:
 def section(title: str, body: str) -> str:
     body = body.strip()
     return f"## {title}\n{body}\n" if body else f"## {title}\n"
+
+
+def contains_any(text: str, needles: list[str]) -> bool:
+    lowered = text.lower()
+    return any(needle.lower() in lowered for needle in needles)
+
+
+def secret_pattern_hits(text: str) -> list[str]:
+    """Return secret-like pattern labels without echoing sensitive values."""
+    lowered = text.lower()
+    hits: list[str] = []
+    if any(token in lowered for token in ["api_key=", "apikey=", "api-key:", "api_key:"]):
+        hits.append("api_key_assignment")
+    if "bearer " in lowered:
+        hits.append("bearer_token")
+    if "-----begin " in lowered and "private key-----" in lowered:
+        hits.append("private_key_block")
+    if any(token in lowered for token in ["token=", "secret=", "password=", "client_secret="]):
+        hits.append("env_assignment")
+    return hits
+
+
+def analyze_prompt_text(text: str, *, name: str = "prompt") -> dict[str, Any]:
+    """Analyze an existing prompt with deterministic public heuristics.
+
+    This intentionally avoids AI calls, private-infra inference, and secret echo.
+    """
+    normalized = text.strip()
+    line_count = 0 if not normalized else len(normalized.splitlines())
+    word_count = len(normalized.split())
+    checks: list[dict[str, Any]] = []
+    missing: list[dict[str, str]] = []
+    present: list[str] = []
+
+    for check in ANALYZE_CHECKS:
+        found = contains_any(normalized, check["needles"])
+        item = {
+            "id": check["id"],
+            "label": check["label"],
+            "severity": check["severity"],
+            "present": found,
+            "recommendation": check["recommendation"],
+        }
+        checks.append(item)
+        if found:
+            present.append(check["id"])
+        else:
+            missing.append({"id": check["id"], "severity": check["severity"], "recommendation": check["recommendation"]})
+
+    secret_hits = secret_pattern_hits(normalized)
+    if secret_hits:
+        missing.insert(
+            0,
+            {
+                "id": "secret_literal_risk",
+                "severity": "BLOCKER",
+                "recommendation": "Remove literal secrets from the prompt source. Keep only key names, presence checks, or redacted placeholders.",
+            },
+        )
+
+    penalty = sum(SEVERITY_PENALTY.get(item["severity"], 5) for item in missing)
+    return {
+        "name": name,
+        "score": max(0, 100 - penalty),
+        "summary": {
+            "line_count": line_count,
+            "word_count": word_count,
+            "present_checks": len(present),
+            "missing_checks": len(missing),
+            "secret_like_patterns": secret_hits,
+            "source_policy": "deterministic-local-heuristics-no-ai-no-secret-echo",
+        },
+        "checks": checks,
+        "missing": missing,
+    }
+
+
+def render_analysis_text(analysis: dict[str, Any]) -> str:
+    secret_hits = analysis["summary"]["secret_like_patterns"]
+    lines = [
+        f"# Prompt Ops Analysis — {analysis['name']}",
+        "",
+        f"Score: {analysis['score']}/100",
+        "",
+        "## Summary",
+        f"- Lines: {analysis['summary']['line_count']}",
+        f"- Words: {analysis['summary']['word_count']}",
+        f"- Present checks: {analysis['summary']['present_checks']}",
+        f"- Missing checks: {analysis['summary']['missing_checks']}",
+        f"- Secret-like patterns: {len(secret_hits)} detected" if secret_hits else "- Secret-like patterns: 0 detected",
+        "- Source policy: deterministic local heuristics; no AI call; no secret value echo",
+        "",
+        "## Missing / Risk Items",
+    ]
+    if analysis["missing"]:
+        for item in analysis["missing"]:
+            lines.append(f"- [{item['severity']}] {item['id']}: {item['recommendation']}")
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Checks"])
+    for item in analysis["checks"]:
+        status = "present" if item["present"] else "missing"
+        lines.append(f"- {item['label']}: {status} ({item['severity']})")
+    return "\n".join(lines).strip() + "\n"
 
 
 def mode_focus(config: dict[str, Any], mode: str) -> list[str]:
@@ -421,6 +574,37 @@ def list_types() -> int:
     return 0
 
 
+def format_analysis(analysis: dict[str, Any], output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(analysis, ensure_ascii=False, indent=2) + "\n"
+    if output_format == "yaml":
+        return yaml.safe_dump(analysis, allow_unicode=True, sort_keys=False)
+    return render_analysis_text(analysis)
+
+
+def analyze(args: argparse.Namespace) -> int:
+    if args.input == "-":
+        source = sys.stdin.read()
+        name = args.name or "stdin"
+    else:
+        path = Path(args.input).expanduser()
+        if not path.exists():
+            raise SystemExit(f"prompt file not found: {path}")
+        source = path.read_text(encoding="utf-8")
+        name = args.name or path.name
+
+    analysis = analyze_prompt_text(source, name=name)
+    rendered = format_analysis(analysis, args.format)
+    if args.output:
+        out = Path(args.output).expanduser()
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rendered, encoding="utf-8")
+        print(f"written: {out}")
+    else:
+        print(rendered, end="")
+    return 0
+
+
 def make(args: argparse.Namespace) -> int:
     config = project_config(args.project)
     prompt = render_prompt(
@@ -484,6 +668,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     type_parser = sub.add_parser("list-types", help="list generic type presets")
     type_parser.set_defaults(func=lambda _args: list_types())
+
+    analyze_parser = sub.add_parser("analyze", help="analyze an existing prompt for missing ops boundaries")
+    analyze_parser.add_argument("--input", "-i", required=True, help="prompt file path, or '-' for stdin")
+    analyze_parser.add_argument("--name", help="optional display name for the analyzed prompt")
+    analyze_parser.add_argument("--format", choices=["text", "json", "yaml"], default="text", help="analysis output format")
+    analyze_parser.add_argument("--output", "-o", help="write analysis to a file")
+    analyze_parser.set_defaults(func=analyze)
     return parser
 
 
