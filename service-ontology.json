@@ -3,7 +3,7 @@
   "entities": [
     {
       "name": "ProjectConfig",
-      "storage": "configs/*.yaml",
+      "storage": "configs/examples/*.yaml",
       "fields": [
         "project.name",
         "project.type",
@@ -146,7 +146,7 @@
         "project_context_id": "fable5-prompt-maker",
         "artifacts": [
           "fable5_prompt_maker.py",
-          "configs/*.yaml",
+          "configs/examples/*.yaml",
           "configs/_types/*.yaml"
         ]
       },
@@ -224,7 +224,7 @@
       {
         "id": "project-configs",
         "project_context_id": "fable5-prompt-maker",
-        "path": "configs/*.yaml"
+        "path": "configs/examples/*.yaml"
       },
       {
         "id": "type-presets",

@@ -1,0 +1,109 @@
+project:
+  name: "Public Real Estate Service"
+  type: "public-web"
+  root: "/path/to/public-web-service"
+  domain: "https://service.example.com"
+  agent_role: "Public real-estate service launch and operations audit agent"
+  description: "Korean public web service that exposes housing schedules, listing details, guide articles, and a gated analysis entry point."
+
+core_focus:
+  - "Public-page UX: home, schedule pages, listing details, guide list/detail, login or gated-analysis entry"
+  - "Search/AI discovery: title, meta description, canonical, robots.txt, sitemap.xml, feed.xml, JSON-LD"
+  - "Public/private boundary: no-cookie access to gated/member-only pages, API responses, sitemap exposure"
+  - "Data quality: dates, regions, listing names, source links, placeholder remnants"
+  - "Operations stability: source, build output, generated deployment URL, and custom domain differences"
+
+mode_focus:
+  audit:
+    - "Public user entry flow and mobile navigation"
+    - "FAQ, internal links, and AI citation structure on guide/detail pages"
+    - "Sample data, broken thumbnails, and duplicate FAQ blocks"
+  seo-geo:
+    - "AI/search user-agent access"
+    - "llms.txt, sitemap, feed, JSON-LD schema @type"
+    - "Question-and-answer sections based on official sources"
+  appsec:
+    - "No-cookie access to private/gated routes"
+    - "Token, secret, or service-key exposure in HTML/JS/API responses"
+    - "Obvious OAuth/session/cookie risks"
+  deploy:
+    - "Separate generated deployment URL and custom domain verification"
+    - "CSS/JS cache-busting and live HTML markers"
+
+verification_gates:
+  - "Inspect project structure and route/source files"
+  - "GET live URL HTTP status"
+  - "GET robots.txt"
+  - "GET sitemap.xml"
+  - "GET feed.xml"
+  - "Parse JSON-LD or check schema markers"
+  - "Check no-cookie private/gated route access"
+  - "Separate source, generated deployment URL, and custom domain evidence"
+
+mode_verification:
+  seo-geo:
+    - "Separate browser UA and AI/search UA access results"
+    - "Check canonical and sitemap URL consistency"
+  appsec:
+    - "Report sensitive exposure presence only, never values"
+    - "Check API 401/403 or redirect behavior"
+  deploy:
+    - "Check custom-domain HTML marker and asset query string"
+
+forbidden:
+  - "File edits without approval"
+  - "Database changes without approval"
+  - "Production deploy without approval"
+  - "Environment variable value output"
+  - "Token/secret/service key output"
+  - "Personal data output"
+
+special_rules:
+  - "Do not expose personalized decisions or member-only analysis on public pages."
+  - "Display public listing information only with official-source grounding."
+  - "Wrong dates, regions, or listing names are BLOCKER issues."
+  - "Keep gated analysis behind login or an approved access boundary."
+  - "Only public pages and public articles/listings belong in the public sitemap."
+  - "Validate robots.txt, sitemap.xml, feed.xml, and llms.txt from the live response."
+  - "A static sitemap can shadow a dynamic sitemap; verify route precedence."
+  - "Zero Search Console rows do not prove search failure without checking property, delay, and permission boundaries."
+
+severity:
+  BLOCKER:
+    - "Private/gated data is exposed to unauthenticated users"
+    - "Token, secret, service key, or OAuth value is exposed"
+    - "A public page is broken enough to block core use"
+    - "sitemap/robots/canonical errors materially block discovery"
+    - "Wrong listing information can affect user decisions"
+  HIGH:
+    - "Mobile navigation or CTA does not work"
+    - "Structured data is wrong on listing/detail pages"
+    - "Page structure materially hurts search or AI citation"
+    - "Required ad/affiliate notice is missing on major pages"
+  MEDIUM:
+    - "title/meta/H1/H2 quality is weak"
+    - "Internal links are thin"
+    - "Thumbnail/tag/FAQ is partially missing"
+    - "Security headers need hardening"
+  LOW:
+    - "Copy polish"
+    - "Visual cleanup"
+    - "Operations documentation polish"
+
+environment_notes:
+  - "local source"
+  - "build output"
+  - "generated deployment URL"
+  - "custom domain"
+  - "browser/AI/search user-agent-specific live response"
+
+report_sections:
+  - "결론"
+  - "확인한 증거"
+  - "BLOCKER"
+  - "HIGH"
+  - "MEDIUM"
+  - "LOW"
+  - "미검증 항목"
+  - "적용 전 필요한 승인"
+  - "다음 실행안"

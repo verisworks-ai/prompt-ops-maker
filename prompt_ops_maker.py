@@ -17,6 +17,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = ROOT / "configs"
+EXAMPLE_CONFIG_DIR = CONFIG_DIR / "examples"
 TYPE_DIR = CONFIG_DIR / "_types"
 OUTPUT_DIR = ROOT / "outputs"
 
@@ -183,7 +184,12 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 
 def project_config(project: str) -> dict[str, Any]:
-    return load_yaml(CONFIG_DIR / f"{project}.yaml")
+    """Load a project config from root configs or public example configs."""
+    candidates = [CONFIG_DIR / f"{project}.yaml", EXAMPLE_CONFIG_DIR / f"{project}.yaml"]
+    for path in candidates:
+        if path.exists():
+            return load_yaml(path)
+    raise SystemExit(f"config not found: {candidates[0]} or {candidates[1]}")
 
 
 def type_config(project_type: str) -> dict[str, Any]:
@@ -390,13 +396,16 @@ def write_or_print(prompt: str, *, dry_run: bool, output: str | None, label: str
 
 def list_projects() -> int:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    EXAMPLE_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     files = sorted(path for path in CONFIG_DIR.glob("*.yaml") if path.is_file())
+    files.extend(sorted(path for path in EXAMPLE_CONFIG_DIR.glob("*.yaml") if path.is_file()))
     if not files:
         print("no project configs")
         return 1
     for path in files:
         data = load_yaml(path)
-        print(f"{path.stem}\t{data.get('project', {}).get('name', path.stem)}")
+        prefix = "examples/" if path.parent == EXAMPLE_CONFIG_DIR else ""
+        print(f"{prefix}{path.stem}\t{data.get('project', {}).get('name', path.stem)}")
     return 0
 
 

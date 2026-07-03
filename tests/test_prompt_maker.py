@@ -25,11 +25,11 @@ def run_wrapper_cli(*args):
     )
 
 
-def test_second_salary_ad_qa_dry_run_includes_appintoss_guards():
+def test_mobile_miniapp_ad_qa_dry_run_includes_platform_guards():
     result = run_cli(
         "make",
         "--project",
-        "second-salary",
+        "mobile-miniapp",
         "--mode",
         "ad-qa",
         "--task",
@@ -42,23 +42,23 @@ def test_second_salary_ad_qa_dry_run_includes_appintoss_guards():
     assert result.returncode == 0, result.stderr
     out = result.stdout
     assert "DRY RUN" in out
-    assert "Apps in Toss" in out
-    assert "초당 얼마" in out
-    assert "loadFullScreenAd" in out
-    assert "showFullScreenAd" in out
+    assert "WebView miniapp" in out
+    assert "Mobile Miniapp" in out
+    assert "full-screen ad" in out
+    assert "load/show" in out
     assert "legacy" in out or "GoogleAdMob" in out
-    assert "AITReader" in out
+    assert "bundle reader" in out
     assert "파일 수정" in out
     assert "승인" in out
     assert "## 확인한 증거" in out
     assert "## 미검증 항목" in out
 
 
-def test_naejipgak_audit_dry_run_includes_public_web_gates():
+def test_public_real_estate_audit_dry_run_includes_public_web_gates():
     result = run_cli(
         "make",
         "--project",
-        "naejipgak",
+        "public-real-estate-service",
         "--mode",
         "audit",
         "--task",
@@ -71,12 +71,11 @@ def test_naejipgak_audit_dry_run_includes_public_web_gates():
     assert result.returncode == 0, result.stderr
     out = result.stdout
     assert "DRY RUN" in out
-    assert "내집각" in out
-    assert "apt.veris.kr" in out
+    assert "Public Real Estate Service" in out
     assert "robots.txt" in out
     assert "sitemap.xml" in out
     assert "JSON-LD" in out
-    assert "비로그인" in out
+    assert "no-cookie" in out
     assert "source" in out
     assert "custom domain" in out
 
@@ -86,7 +85,7 @@ def test_output_file_is_written_when_requested(tmp_path):
     result = run_cli(
         "make",
         "--project",
-        "second-salary",
+        "mobile-miniapp",
         "--mode",
         "audit",
         "--task",
@@ -98,7 +97,7 @@ def test_output_file_is_written_when_requested(tmp_path):
     assert result.returncode == 0, result.stderr
     assert output.exists()
     text = output.read_text(encoding="utf-8")
-    assert "초당 얼마" in text
+    assert "Mobile Miniapp" in text
     assert "## 다음 실행안" in text
     assert str(output) in result.stdout
 
@@ -107,8 +106,8 @@ def test_list_projects_shows_seed_configs():
     result = run_cli("list-projects")
 
     assert result.returncode == 0, result.stderr
-    assert "second-salary" in result.stdout
-    assert "naejipgak" in result.stdout
+    assert "mobile-miniapp" in result.stdout
+    assert "public-real-estate-service" in result.stdout
 
 
 def test_list_types_shows_generic_presets():
@@ -164,7 +163,7 @@ def test_project_prompt_can_target_claude_and_discord_environment():
     result = run_cli(
         "make",
         "--project",
-        "naejipgak",
+        "public-real-estate-service",
         "--mode",
         "appsec",
         "--task",
@@ -184,15 +183,15 @@ def test_project_prompt_can_target_claude_and_discord_environment():
     assert "메시지는 짧게" in out
 
 
-def test_veris_kr_prompt_includes_brand_hub_boundaries():
+def test_brand_hub_prompt_includes_public_boundaries():
     result = run_cli(
         "make",
         "--project",
-        "veris-kr",
+        "brand-hub",
         "--mode",
         "seo-geo",
         "--task",
-        "veris.kr 공개 브랜드 허브 SEO/GEO 감사",
+        "공개 브랜드 허브 SEO/GEO 감사",
         "--target-ai",
         "codex",
         "--environment",
@@ -204,11 +203,10 @@ def test_veris_kr_prompt_includes_brand_hub_boundaries():
 
     assert result.returncode == 0, result.stderr
     out = result.stdout
-    assert "veris.kr" in out
-    assert "브랜드 허브" in out
+    assert "Brand Hub" in out
+    assert "brand hub" in out
     assert "https://example.com" in out
-    assert "/path/to/veris-brand-site" in out
-    assert "apt.veris.kr" in out
+    assert "/path/to/brand-site" in out
     assert "llms.txt" in out
     assert "hosting project: brand-site-production" in out
-    assert "Fable 5 성능을 보장" in out
+    assert "reusable prompt-operation patterns" in out
