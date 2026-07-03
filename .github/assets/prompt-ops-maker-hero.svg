@@ -1,0 +1,81 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">prompt-ops-maker reverse analysis flow</title>
+  <desc id="desc">Existing prompt text flows through a deterministic analyzer to a score card showing missing gates and no secret echo.</desc>
+  <defs>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="0.52" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="card" x1="88" y1="98" x2="1188" y2="552" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#0B1120"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="238" y1="318" x2="1028" y2="318" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.5" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="26" stdDeviation="34" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="640" fill="url(#canvas)"/>
+  <circle cx="1035" cy="95" r="220" fill="#2563EB" fill-opacity="0.10"/>
+  <circle cx="165" cy="540" r="230" fill="#7C3AED" fill-opacity="0.10"/>
+  <rect x="64" y="58" width="1152" height="524" rx="44" fill="url(#card)" stroke="#1E293B" stroke-width="2" filter="url(#shadow)"/>
+
+  <text x="110" y="126" fill="#F8FAFC" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="46" font-weight="850" letter-spacing="-1.4">Reverse-analyze existing prompts before agents run</text>
+  <text x="112" y="166" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui" font-size="22" font-weight="500">Deterministic local checks for scope, deny lists, verification gates, evidence reporting, and secret-like patterns.</text>
+
+  <g transform="translate(104 218)">
+    <rect width="288" height="240" rx="28" fill="#020617" stroke="#334155" stroke-width="2"/>
+    <rect x="24" y="24" width="148" height="28" rx="14" fill="#1E293B"/>
+    <text x="42" y="44" fill="#E2E8F0" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">existing-prompt.txt</text>
+    <text x="28" y="84" fill="#94A3B8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="17">You are an agent.</text>
+    <text x="28" y="116" fill="#94A3B8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Add the feature.</text>
+    <text x="28" y="148" fill="#FCA5A5" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="17">API_KEY=[REDACTED]</text>
+    <text x="28" y="180" fill="#94A3B8" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="17">Do not deploy.</text>
+    <rect x="24" y="202" width="112" height="22" rx="11" fill="#0F172A" stroke="#475569"/>
+    <text x="40" y="218" fill="#CBD5E1" font-family="Inter, ui-sans-serif, system-ui" font-size="12" font-weight="700">prompt input</text>
+  </g>
+
+  <path d="M420 338H520" stroke="url(#flow)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M500 318L526 338L500 358" stroke="#A78BFA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(536 218)">
+    <rect width="224" height="240" rx="112" fill="#08111F" stroke="#38BDF8" stroke-opacity="0.75" stroke-width="3"/>
+    <path d="M112 52L158 70V110C158 148 138 174 112 184C86 174 66 148 66 110V70L112 52Z" fill="#0F172A" stroke="#60A5FA" stroke-width="5"/>
+    <path d="M90 116L108 134L138 94" stroke="#22C55E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="57" y="204" fill="#E0F2FE" font-family="Inter, ui-sans-serif, system-ui" font-size="18" font-weight="850">analyze engine</text>
+    <text x="56" y="226" fill="#93C5FD" font-family="Inter, ui-sans-serif, system-ui" font-size="13" font-weight="700">AI calls: 0 · network: 0</text>
+  </g>
+
+  <path d="M786 338H886" stroke="url(#flow)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M866 318L892 338L866 358" stroke="#22C55E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(908 218)">
+    <rect width="266" height="240" rx="28" fill="#020617" stroke="#334155" stroke-width="2"/>
+    <text x="28" y="52" fill="#F8FAFC" font-family="Inter, ui-sans-serif, system-ui" font-size="23" font-weight="850">Prompt Ops Report</text>
+    <g transform="translate(28 74)">
+      <rect width="98" height="34" rx="17" fill="#7F1D1D" fill-opacity="0.38" stroke="#F87171"/>
+      <text x="19" y="23" fill="#FECACA" font-family="Inter, ui-sans-serif, system-ui" font-size="16" font-weight="850">14 / 100</text>
+    </g>
+    <text x="28" y="132" fill="#CBD5E1" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15">missing:</text>
+    <text x="44" y="160" fill="#FDE68A" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15">verification_gates</text>
+    <text x="44" y="186" fill="#FDE68A" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15">evidence_first_report</text>
+    <text x="44" y="212" fill="#FDE68A" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15">tool_result_grounding</text>
+    <text x="28" y="238" fill="#86EFAC" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">secret values are not echoed</text>
+  </g>
+
+  <g transform="translate(110 504)">
+    <rect width="164" height="34" rx="17" fill="#064E3B" fill-opacity="0.48" stroke="#10B981"/>
+    <text x="22" y="23" fill="#A7F3D0" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">deterministic</text>
+    <rect x="180" width="132" height="34" rx="17" fill="#1D4ED8" fill-opacity="0.34" stroke="#60A5FA"/>
+    <text x="207" y="23" fill="#BFDBFE" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">JSON/YAML</text>
+    <rect x="328" width="146" height="34" rx="17" fill="#7C2D12" fill-opacity="0.34" stroke="#FB923C"/>
+    <text x="352" y="23" fill="#FED7AA" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">no secret echo</text>
+    <rect x="490" width="128" height="34" rx="17" fill="#581C87" fill-opacity="0.34" stroke="#C084FC"/>
+    <text x="520" y="23" fill="#E9D5FF" font-family="Inter, ui-sans-serif, system-ui" font-size="14" font-weight="800">CLI first</text>
+  </g>
+</svg>

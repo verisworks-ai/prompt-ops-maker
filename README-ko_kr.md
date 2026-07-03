@@ -1,8 +1,47 @@
+<p align="center">
+  <img src=".github/assets/prompt-ops-maker-logo.svg" alt="prompt-ops-maker" width="640">
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> ·
+  <a href="#빠른-사용">빠른 사용</a> ·
+  <a href="#기존-프롬프트-역분석">기존 프롬프트 역분석</a> ·
+  <a href="#보안-경계">보안 경계</a>
+</p>
+
+<p align="center">
+  <img src=".github/assets/prompt-ops-maker-hero.svg" alt="기존 프롬프트 역분석 흐름" width="960">
+</p>
+
 # Prompt Ops Maker
 
-Prompt Ops Maker는 Fable 5, Claude, Codex, Hermes, MCP, Gemini, 범용 AI 에이전트에 재사용할 작업 운영 프롬프트를 생성한다.
+Prompt Ops Maker는 Fable 5, Claude, Codex, Hermes, MCP, Gemini, 범용 AI 에이전트에 재사용할 작업 운영 프롬프트를 생성하고, 기존 프롬프트의 운영 경계 누락을 로컬에서 분석한다.
 
 Fable 5와 동급 성능을 주장하지 않는다. 장기 작업에 필요한 effort, 실행 경계, 검증 게이트, 증거 기반 보고, 미검증 항목 보고 규칙을 템플릿화한다.
+
+## 기존 프롬프트 역분석
+
+```bash
+prompt-ops-maker analyze --input existing-prompt.txt --format text
+prompt-ops-maker analyze --input existing-prompt.txt --format json --output analysis.json
+```
+
+```text
+점검 항목
+- 실행 경계
+- 금지 행동 / deny-list
+- 검증 게이트
+- 미검증 항목 보고
+- evidence-first 보고
+- tool 결과 기반 grounding
+- secret-like 패턴
+
+보안 경계
+- AI 호출 0
+- 외부 API 호출 0
+- private 인프라 추론 0
+- secret 원문 출력 0
+```
 
 ## 결과물
 
