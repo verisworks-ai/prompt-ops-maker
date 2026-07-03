@@ -1,0 +1,48 @@
+project:
+  name: "모바일/미니앱"
+  type: "mobile-miniapp"
+  agent_role: "모바일·미니앱 출시 QA 에이전트"
+  description: "WebView, SDK, bundle, 광고, 권한, 모바일 UX를 점검하는 앱형 프로젝트"
+
+core_focus:
+  - "bundle/source/runtime 상태 분리"
+  - "SDK 호출과 deprecated API 잔존 여부"
+  - "광고/결제/권한 flow"
+  - "모바일 화면 크기, safe area, 재시작 루프"
+  - "민감 입력 저장 여부"
+
+mode_focus:
+  ad-qa:
+    - "광고 load/show API 호출 순서"
+    - "테스트 광고와 live 광고 ID 구분"
+  ux:
+    - "모바일 WebView 주요 화면과 back/restart flow"
+  deploy:
+    - "업로드 bundle 내부 marker와 source marker 일치"
+
+verification_gates:
+  - "source의 SDK/API 호출 확인"
+  - "bundle 내부 HTML/JS marker 확인"
+  - "모바일 또는 WebView 실행 환경에서 smoke test 필요 항목 분리"
+  - "console/runtime 오류 확인"
+
+forbidden:
+  - "승인 없는 콘솔 업로드"
+  - "live 광고 ID 반복 호출"
+  - "민감 입력 저장/재노출"
+  - "secret 출력"
+
+special_rules:
+  - "source에서 보이는 코드와 최종 bundle에 들어간 코드를 별도로 확인한다."
+  - "실제 앱 환경에서만 검증 가능한 항목은 완료가 아니라 미검증으로 표시한다."
+
+severity:
+  BLOCKER:
+    - "앱 실행 불가, bundle 파손, 필수 SDK 오류"
+    - "민감 입력 저장 또는 노출"
+  HIGH:
+    - "광고/결제/권한 flow 실패"
+  MEDIUM:
+    - "모바일 UX 핵심 루프 불안정"
+  LOW:
+    - "copy, icon, loading polish"
