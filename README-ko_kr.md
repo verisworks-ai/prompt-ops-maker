@@ -31,7 +31,7 @@ python3 prompt_ops_maker.py list-types
 
 ```bash
 prompt-ops-maker make \
-  --project second-salary \
+  --project mobile-miniapp \
   --mode ad-qa \
   --task "광고 연동 QA" \
   --effort high \
@@ -84,7 +84,7 @@ generic  범용 실행 환경
 python3 -m pytest -q
 python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
-python3 prompt_ops_maker.py make --project veris-kr --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
+python3 prompt_ops_maker.py make --project brand-hub --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
 ```
 
 ## 보안 경계

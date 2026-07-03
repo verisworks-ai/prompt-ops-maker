@@ -6,7 +6,7 @@
 
 ```text
 1. GitHub 오픈소스 공개
-   1-1. Apps in Toss 프로젝트 공개/운영 프롬프트 지원
+   1-1. WebView miniapp 프로젝트 공개/운영 프롬프트 지원
    1-2. Kakao PlayMCP 등 MCP 기반 환경 공개/운영 프롬프트 지원
 
 2. Claude Fable 5 한정 제공 종료 대비
@@ -56,7 +56,7 @@ model-agnostic-prompt-maker
 - Claude/Fable/Codex/Gemini 사용자
 - Hermes Agent 사용자
 - MCP tool/resource/prompt 기반 자동화 사용자
-- Apps in Toss, web-public, automation-pipeline, mobile-miniapp 운영자
+- WebView miniapp, web-public, automation-pipeline 운영자
 
 핵심 가치:
 - 특정 모델 성능 동등성을 주장하지 않고 작업 경계, effort, 검증, 보고 형식을 표준화
@@ -81,7 +81,7 @@ HIGH
 - pyproject.toml 추가 및 console_scripts 제공
 - GitHub Actions 테스트 추가
 - examples/ 디렉토리 추가
-- Apps in Toss 예제와 MCP 예제 분리
+- WebView miniapp 예제와 MCP 예제 분리
 
 MEDIUM
 - wizard 모드 추가
@@ -140,9 +140,9 @@ MCP 환경용 프롬프트는 다음을 기본 포함한다.
 - resource 기반 증거와 추정 분리
 ```
 
-## Apps in Toss 관점
+## WebView miniapp 관점
 
-Apps in Toss 예제는 다음을 기본 포함한다.
+WebView miniapp 예제는 다음을 기본 포함한다.
 
 ```text
 - source와 bundle 내부 산출물 분리

@@ -1,0 +1,104 @@
+project:
+  name: "Mobile Miniapp"
+  type: "mobile-miniapp"
+  root: "/path/to/mobile-miniapp"
+  agent_role: "Mobile miniapp launch, ads, and mobile UX QA agent"
+  description: "WebView miniapp with a bundled release artifact, ad flow, result screen, share loop, and restart loop."
+
+core_focus:
+  - "Miniapp bundle creation and inspection of internal sources/index.html"
+  - "Source, web build output, and bundle artifact consistency"
+  - "Platform SDK/API usage and unsupported-environment fallback"
+  - "Mobile WebView safe area, small-screen CTA, start → result → share → restart loop"
+  - "Console version name and internal release marker separation"
+
+mode_focus:
+  ad-qa:
+    - "Full-screen ad flow: load → loaded event → show → next load"
+    - "Current platform ad load/show API usage"
+    - "Legacy ad API call remnants"
+    - "If banner ads exist, initialize → attach order"
+    - "Separate sandbox ad limitations from real app QR/private-scheme verification"
+  audit:
+    - "Release marker or version marker freshness"
+    - "Result screen, share copy, and restart state reset"
+    - "Review-facing app name, description, icon, and storage usage"
+  deploy:
+    - "Separate unrelated dirty files before upload"
+    - "Create and inspect bundle artifact"
+    - "Confirm console status/version after upload"
+  ux:
+    - "First-screen CTA visibility"
+    - "Result amount/time/rank/share CTA clarity"
+
+verification_gates:
+  - "Inspect package scripts"
+  - "Run API/static check if available"
+  - "Run build"
+  - "Inspect bundle artifact internals with the platform bundle reader"
+  - "Check release marker/version marker"
+  - "Check absence of legacy ad API calls"
+  - "Check current ad API calls"
+
+mode_verification:
+  ad-qa:
+    - "Check full-screen ad load/show strings and event flow"
+    - "Separate sandbox and real app QR/private-scheme test requirements"
+  deploy:
+    - "Check app name, deployment ID, and internal HTML marker in the bundle"
+    - "Check console status/version after upload"
+
+forbidden:
+  - "Console upload without approval"
+  - "Production deploy without approval"
+  - "Environment variable value output"
+  - "Token/secret/credential output"
+  - "Repeated live ad ID testing"
+
+special_rules:
+  - "Do not judge launch readiness from source only; inspect the actual bundle artifact."
+  - "Use the platform bundle reader instead of treating the bundle as a normal zip when required."
+  - "Console version name and internal HTML release marker can differ."
+  - "Sandbox ad non-support is not automatically a code bug."
+  - "Keep real app QR/private-scheme ad validation as a separate gate."
+  - "Upload success is not review readiness; separate console status and real app testing."
+
+severity:
+  BLOCKER:
+    - "Bundle artifact is not generated"
+    - "Generated bundle HTML differs from current source"
+    - "Core start/result/restart loop fails in the target WebView"
+    - "Legacy ad API remains in the actual bundle"
+    - "Secret, token, or key is exposed in the bundle or logs"
+  HIGH:
+    - "Ad load/show flow is wrong enough to block real exposure"
+    - "Sandbox limitation and real code problem are not separated"
+    - "CTA is hidden on small mobile screens"
+    - "Console version/status check is missing after upload"
+  MEDIUM:
+    - "Copy is too long or mismatched to miniapp context"
+    - "Animation performance risk"
+    - "Debug/analytics verification is thin"
+    - "Test scripts target an outdated public URL"
+  LOW:
+    - "Copy polish"
+    - "Small visual polish"
+    - "Documentation polish"
+
+environment_notes:
+  - "local browser"
+  - "web build output"
+  - "bundle artifact"
+  - "sandbox app"
+  - "real app private scheme or QR"
+
+report_sections:
+  - "결론"
+  - "확인한 증거"
+  - "BLOCKER"
+  - "HIGH"
+  - "MEDIUM"
+  - "LOW"
+  - "미검증 항목"
+  - "적용 전 필요한 승인"
+  - "다음 실행안"

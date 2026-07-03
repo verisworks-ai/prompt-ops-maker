@@ -81,7 +81,7 @@ python3 prompt_ops_maker.py list-types
 
 ```bash
 prompt-ops-maker make \
-  --project second-salary \
+  --project mobile-miniapp \
   --mode ad-qa \
   --task "Ad integration QA" \
   --effort high \
@@ -108,21 +108,21 @@ prompt-ops-maker make-adhoc \
 
 ```bash
 prompt-ops-maker make \
-  --project veris-kr \
+  --project brand-hub \
   --mode seo-geo \
   --task "Public search and AI citation audit" \
   --effort high \
   --target-ai claude \
   --environment discord \
-  --output outputs/veris-kr-seo-geo.md
+  --output outputs/brand-hub-seo-geo.md
 ```
 
 ## Example output
 
 ```text
-# DRY RUN — second-salary / ad-qa / high / codex / local
+# DRY RUN — mobile-miniapp / ad-qa / high / codex / local
 
-너는 초당 얼마 Apps in Toss 광고 QA 에이전트다.
+You are the Mobile Miniapp ad QA agent.
 
 이번 작업은 high effort로 진행해.
 대상 AI/실행자: Codex
@@ -130,8 +130,8 @@ prompt-ops-maker make \
 수정하지 말고 광고 연동 상태만 평가해.
 
 검증 게이트:
-1. AIT bundle output 확인
-2. loadFullScreenAd / showFullScreenAd 호출 경로 확인
+1. Bundle artifact output 확인
+2. Full-screen ad load/show 경로 확인
 3. 실제 테스트 결과와 미검증 항목 분리
 
 금지:
@@ -200,7 +200,7 @@ mobile-miniapp       WebView, miniapp, SDK, ads bundle readiness
 
 ## Project configs
 
-Add a YAML file under `configs/<project>.yaml`:
+Add a private YAML file under `configs/<project>.yaml`, or publish sanitized examples under `configs/examples/<project>.yaml`:
 
 ```yaml
 project:
@@ -236,7 +236,7 @@ prompt-ops-maker make --project example --mode audit --task "Launch audit" --eff
 
 ```bash
 prompt-ops-maker make \
-  --project veris-kr \
+  --project brand-hub \
   --mode deploy \
   --task "Production release gate" \
   --effort xhigh \
@@ -279,9 +279,10 @@ prompt-ops-maker/
 ├── prompt_ops_maker.py          ← public CLI entry
 ├── fable5_prompt_maker.py       ← compatibility wrapper
 ├── configs/
-│   ├── second-salary.yaml       ← project prompt config
-│   ├── naejipgak.yaml           ← project prompt config
-│   ├── veris-kr.yaml            ← project prompt config
+│   ├── examples/
+│   │   ├── mobile-miniapp.yaml                 ← sanitized example config
+│   │   ├── public-real-estate-service.yaml     ← sanitized example config
+│   │   └── brand-hub.yaml                      ← sanitized example config
 │   └── _types/
 │       ├── generic.yaml
 │       ├── automation-pipeline.yaml
@@ -299,14 +300,14 @@ prompt-ops-maker/
 python3 -m pytest -q
 python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
-python3 prompt_ops_maker.py make --project veris-kr --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
+python3 prompt_ops_maker.py make --project brand-hub --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
 ```
 
 Current release smoke:
 
 ```text
 pytest                         9 passed
-list-projects                  naejipgak, second-salary, veris-kr
+list-projects                  examples/brand-hub, examples/mobile-miniapp, examples/public-real-estate-service
 list-types                     automation-pipeline, generic, mobile-miniapp, web-public
 clean editable install          prompt-ops-maker list-types OK
 ```

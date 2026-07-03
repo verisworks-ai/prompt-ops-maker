@@ -1,0 +1,111 @@
+project:
+  name: "Brand Hub"
+  type: "public-brand-web"
+  root: "/path/to/brand-site"
+  domain: "https://example.com"
+  agent_role: "Public brand hub launch and operations audit agent"
+  description: "Static brand hub that routes users to public products and documents the public/private boundary for a small product portfolio."
+
+core_focus:
+  - "Brand hub UX: home, product cards, CTA, footer, and external service entry links"
+  - "Ownership boundary: brand hub source and product-service source remain separate"
+  - "Search/AI discovery: title, meta description, canonical, OG/Twitter meta, robots.txt, sitemap.xml, llms.txt"
+  - "Static output: out/index.html, out/robots.txt, out/sitemap.xml, out/llms.txt, hosting output"
+  - "Security boundary: no secret/env/API key/internal project ID in public static assets"
+  - "Brand voice: result-first, evidence-based, restrained claims"
+
+mode_focus:
+  audit:
+    - "Check whether the homepage message and product-entry flow are visible on the live domain"
+    - "Check README/AGENTS/CLAUDE operating-rule conflicts"
+    - "Check broken CSS/JS/images and 404 assets"
+  seo-geo:
+    - "Check AI/search user-agent access"
+    - "Check llms.txt, sitemap, robots, canonical, JSON-LD/schema markers"
+    - "Check whether brand/product descriptions are exposed as citation-friendly text"
+  appsec:
+    - "Check public HTML/JS/CSS/assets for secret, token, service role, private identifier exposure"
+    - "Check security headers: CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy"
+    - "Check whether brand and product-service projects/domains are mixed"
+  deploy:
+    - "Verify the hosting project is the intended brand site"
+    - "Compare source build output with live custom-domain markers"
+    - "Block unrelated dirty files and product-service files before deploy"
+  ux:
+    - "Check mobile/desktop visibility for product cards, CTA, navigation, and footer"
+    - "Check visual and copy consistency against the current brand rules"
+
+verification_gates:
+  - "Confirm project root and AGENTS.md/README.md/CLAUDE.md"
+  - "Check git status, branch, and HEAD"
+  - "Inspect package.json scripts"
+  - "Run lint if available"
+  - "Run build or inspect existing static output"
+  - "GET live URL"
+  - "GET robots.txt, sitemap.xml, and llms.txt"
+  - "Check home HTML for title/meta/canonical/OG markers"
+
+mode_verification:
+  seo-geo:
+    - "Separate browser UA and AI/search UA access results"
+    - "Check canonical, sitemap loc, and live-domain consistency"
+    - "Check that llms.txt links match public products"
+  appsec:
+    - "Report secret exposure presence only, never values"
+    - "Check headers on the live custom domain"
+  deploy:
+    - "Inspect hosting project identity or local hosting project metadata"
+    - "Compare out/ artifacts with live custom-domain markers"
+  ux:
+    - "Use browser/screenshot or live HTML markers before claiming visible UI completion"
+
+forbidden:
+  - "Production deploy without approval"
+  - "Product-service code edits without approval"
+  - "Hosting project setting changes without approval"
+  - "Environment variable value output"
+  - "Token/secret/service key output"
+  - "Private route or internal ID addition to public artifacts"
+
+special_rules:
+  - "The brand hub and product service are separate projects. Do not mix source code or deployment targets."
+  - "Do not treat source, static output, generated deployment URL, and custom domain as the same state."
+  - "If README/AGENTS/CLAUDE design rules conflict, report source and live evidence before editing."
+  - "Do not add secrets, database connections, service roles, or private admin flows to a public static site."
+  - "Describe this as reusable prompt-operation patterns, not model-performance parity."
+
+severity:
+  BLOCKER:
+    - "Live brand URL is unreachable or a core page returns 5xx"
+    - "Secret, token, service key, or personal data is exposed in public HTML/JS/assets"
+    - "Brand deployment is mixed with product-service project/domain"
+  HIGH:
+    - "robots/sitemap/canonical/llms.txt errors block search or AI discovery"
+    - "Security headers are absent or materially weak for the public site"
+    - "Main CTA or product link points to the wrong domain"
+  MEDIUM:
+    - "title/meta/OG/brand description quality is weak"
+    - "Mobile main screen, product card, or CTA visibility is broken"
+    - "README/AGENTS/CLAUDE operating rules conflict"
+  LOW:
+    - "Copy polish"
+    - "Operations documentation polish"
+    - "Auxiliary image or OG asset improvement"
+
+environment_notes:
+  - "local source: /path/to/brand-site"
+  - "static build output: out/"
+  - "hosting project: brand-site-production"
+  - "custom domain: https://example.com"
+  - "separate service source: /path/to/product-service"
+
+report_sections:
+  - "결론"
+  - "확인한 증거"
+  - "BLOCKER"
+  - "HIGH"
+  - "MEDIUM"
+  - "LOW"
+  - "미검증 항목"
+  - "적용 전 필요한 승인"
+  - "다음 실행안"
