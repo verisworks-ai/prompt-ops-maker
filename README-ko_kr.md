@@ -8,7 +8,9 @@ Fable 5와 동급 성능을 주장하지 않는다. 장기 작업에 필요한 e
 
 ```text
 입력  project config 또는 type preset + task + target AI + runtime
+입력  existing prompt file
 출력  범위, 금지 행동, 검증 게이트, 보고 형식이 포함된 prompt
+출력  기존 prompt의 누락된 운영 경계 분석 결과
 ```
 
 ## 설치
@@ -54,6 +56,15 @@ prompt-ops-maker make-adhoc \
   --dry-run
 ```
 
+기존 프롬프트 역분석:
+
+```bash
+prompt-ops-maker analyze --input existing-prompt.txt --format text
+prompt-ops-maker analyze --input existing-prompt.txt --format json --output analysis.json
+```
+
+역분석은 로컬 deterministic 규칙만 사용한다. AI 모델을 호출하지 않고, private 인프라를 추론하지 않고, secret으로 보이는 값은 출력하지 않는다.
+
 ## target AI
 
 ```text
@@ -85,6 +96,7 @@ python3 -m pytest -q
 python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
 python3 prompt_ops_maker.py make --project brand-hub --mode audit --task 'smoke test' --effort high --target-ai codex --environment local --dry-run
+python3 prompt_ops_maker.py analyze --input README.md --format json
 ```
 
 ## 보안 경계

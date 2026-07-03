@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -210,3 +211,43 @@ def test_brand_hub_prompt_includes_public_boundaries():
     assert "llms.txt" in out
     assert "hosting project: brand-site-production" in out
     assert "reusable prompt-operation patterns" in out
+
+
+def test_analyze_prompt_reports_missing_boundaries_without_secret_echo(tmp_path):
+    prompt = tmp_path / "existing_prompt.txt"
+    prompt.write_text(
+        "You are a coding agent. Add the feature. API_KEY=sk-redacted-value",
+        encoding="utf-8",
+    )
+
+    result = run_cli("analyze", "--input", str(prompt), "--format", "json")
+
+    assert result.returncode == 0, result.stderr
+    out = result.stdout
+    assert "sk-redacted-value" not in out
+    data = json.loads(out)
+    assert data["summary"]["source_policy"] == "deterministic-local-heuristics-no-ai-no-secret-echo"
+    assert data["summary"]["secret_like_patterns"] == ["api_key_assignment"]
+    missing_ids = {item["id"] for item in data["missing"]}
+    assert "secret_literal_risk" in missing_ids
+    assert "verification_gates" in missing_ids
+    assert data["score"] < 100
+
+
+def test_analyze_prompt_text_output_can_be_written(tmp_path):
+    prompt = tmp_path / "safe_prompt.txt"
+    output = tmp_path / "analysis.md"
+    prompt.write_text(
+        "결론 먼저 보고해. 승인 없는 배포 금지. 검증은 pytest와 build 결과로 확인. 미검증 항목을 분리.",
+        encoding="utf-8",
+    )
+
+    result = run_cli("analyze", "--input", str(prompt), "--output", str(output))
+
+    assert result.returncode == 0, result.stderr
+    assert output.exists()
+    text = output.read_text(encoding="utf-8")
+    assert "Prompt Ops Analysis" in text
+    assert "Secret-like patterns: 0 detected" in text
+    assert "Verification gates: present" in text
+    assert str(output) in result.stdout
