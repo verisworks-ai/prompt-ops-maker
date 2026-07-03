@@ -1,15 +1,32 @@
+<p align="center">
+  <img src=".github/assets/prompt-ops-maker-logo.svg" alt="prompt-ops-maker" width="640">
+</p>
+
+<p align="center">
+  <a href="https://www.python.org/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-green.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+  <a href="#security-first-reverse-analysis"><img alt="No AI call" src="https://img.shields.io/badge/analysis-no%20AI%20call-0F766E.svg"></a>
+  <a href="#security-first-reverse-analysis"><img alt="No secret echo" src="https://img.shields.io/badge/secrets-no%20echo-B45309.svg"></a>
+  <a href="#what-it-produces"><img alt="Agent Ops" src="https://img.shields.io/badge/agent--ops-verification%20gates-blue.svg"></a>
+  <a href="https://modelcontextprotocol.io"><img alt="MCP Ready" src="https://img.shields.io/badge/MCP-prompt%20workflow-blueviolet.svg"></a>
+</p>
+
+<p align="center">
+  <a href="README-ko_kr.md">한국어</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#security-first-reverse-analysis">Analyze prompts</a> ·
+  <a href="#security-boundary">Security boundary</a>
+</p>
+
+<p align="center">
+  <img src=".github/assets/prompt-ops-maker-hero.svg" alt="Reverse analyze existing prompts before agents run" width="960">
+</p>
+
 # prompt-ops-maker
 
 **AI agents ship better when the prompt includes scope, deny lists, verification gates, and a result-first report format. Those rules are easy to forget when every project uses a different model or runtime.**
 
 `prompt-ops-maker` generates reusable operating prompts for Claude Fable 5-style long tasks, Claude, Codex, Hermes, MCP agents, Gemini, and generic AI agents.
-
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Agent Ops](https://img.shields.io/badge/agent--ops-verification%20gates-blue.svg)](#what-it-produces)
-[![MCP Ready](https://img.shields.io/badge/MCP-prompt%20workflow-blueviolet.svg)](https://modelcontextprotocol.io)
-
-[한국어](README-ko_kr.md)
 
 > One command. Project config or preset in. Verification-focused agent prompt out.
 
@@ -18,8 +35,45 @@
 ## One-line result
 
 ```text
-prompt-ops-maker = prompt generator for agent scope + safety boundaries + verification gates
+prompt-ops-maker = prompt generator and local analyzer for agent scope + safety boundaries + verification gates
 ```
+
+## Security-first reverse analysis
+
+Existing prompts often miss the operational rules that keep AI agents safe during long tasks. The `analyze` command checks those rules locally before the prompt is reused.
+
+```bash
+prompt-ops-maker analyze --input existing-prompt.txt --format text
+prompt-ops-maker analyze --input existing-prompt.txt --format json --output analysis.json
+```
+
+Example report shape:
+
+```text
+# Prompt Ops Analysis — existing-prompt.txt
+
+Score: 14/100
+
+## Summary
+- Present checks: 2
+- Missing checks: 5
+- Secret-like patterns: 1 detected
+- Source policy: deterministic local heuristics; no AI call; no secret value echo
+
+## Missing / Risk Items
+- [BLOCKER] secret_literal_risk
+- [HIGH] deny_list
+- [HIGH] verification_gates
+- [MEDIUM] evidence_first_report
+- [MEDIUM] tool_result_grounding
+
+## Checks
+- Execution boundary: present (BLOCKER)
+- Unverified item reporting: present (MEDIUM)
+- Verification gates: missing (HIGH)
+```
+
+The analyzer uses deterministic local checks only. It does not infer private infrastructure and does not print detected secret values.
 
 ## Why this exists
 
