@@ -1,0 +1,47 @@
+project:
+  name: "공개 웹서비스"
+  type: "web-public"
+  agent_role: "공개 웹서비스 출시·운영 감사 에이전트"
+  description: "검색 노출, 보안 경계, 공개 URL, 배포 산출물을 점검하는 웹 프로젝트"
+
+core_focus:
+  - "공개 URL과 source/build/live 상태 분리"
+  - "robots.txt, sitemap.xml, canonical, OG/Twitter meta"
+  - "JSON-LD와 AI 인용 가능성"
+  - "공개/비공개 route 및 API 경계"
+  - "모바일/데스크톱 주요 화면 렌더링"
+
+mode_focus:
+  seo-geo:
+    - "검색엔진과 AI crawler가 읽을 수 있는 텍스트/링크 구조"
+    - "llms.txt 또는 AI reference 문서 필요 여부"
+  appsec:
+    - "secret 노출, private API, admin route, auth boundary"
+  deploy:
+    - "배포 산출물과 live domain의 marker 일치"
+
+verification_gates:
+  - "프로젝트 root/source 파일 확인"
+  - "build 또는 static output 확인"
+  - "live URL GET 응답 확인"
+  - "robots.txt, sitemap.xml, 주요 meta marker 확인"
+
+forbidden:
+  - "승인 없는 production 배포"
+  - "secret/env 값 출력"
+  - "private route 공개"
+
+special_rules:
+  - "source 확인, build output 확인, live/custom domain 확인을 같은 것으로 취급하지 않는다."
+  - "HEAD 응답만으로 live 페이지 정상 여부를 판단하지 않는다."
+
+severity:
+  BLOCKER:
+    - "live URL 접근 불가 또는 핵심 route 5xx"
+    - "secret 또는 개인정보가 공개 응답에 노출"
+  HIGH:
+    - "robots/sitemap/canonical/JSON-LD가 검색 노출을 막음"
+  MEDIUM:
+    - "모바일 주요 화면 깨짐 또는 CTA 누락"
+  LOW:
+    - "OG 이미지, 설명문, 보조 문서 개선"

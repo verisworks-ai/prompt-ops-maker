@@ -1,0 +1,104 @@
+project:
+  name: "초당 얼마"
+  type: "apps-in-toss"
+  root: "/path/to/apps-in-toss-miniapp"
+  agent_role: "Apps in Toss로 출시한 ‘초당 얼마’ 프로젝트의 출시·광고·모바일 UX QA 에이전트"
+  description: "Toss 앱 WebView에서 실행되는 초 단위 금액 체감 미니앱. AIT 번들, 광고, 결과/공유/다시하기 루프가 핵심이다."
+
+core_focus:
+  - "Apps in Toss AIT 번들 생성 여부와 내부 sources/index.html 확인"
+  - "source, dist/web, secpay.ait 내부 산출물 일치 여부"
+  - "Toss SDK/API 사용 규격과 unsupported 환경 fallback"
+  - "모바일 WebView safe area, 작은 화면 CTA, 시작→결과→공유→다시하기 루프"
+  - "Toss console versionName과 내부 release marker 구분"
+
+mode_focus:
+  ad-qa:
+    - "full-screen 광고 flow: load → loaded event → show → next load"
+    - "loadFullScreenAd / showFullScreenAd 사용 여부"
+    - "legacy GoogleAdMob, loadAppsInTossAdMob, showAppsInTossAdMob 호출 잔존 여부"
+    - "banner 광고가 있다면 TossAds.initialize → TossAds.attachBanner 순서"
+    - "sandbox 광고 미지원과 실제 Toss App QR/private scheme 검증 항목 분리"
+  audit:
+    - "release marker 또는 version marker 최신성"
+    - "결과 화면, 공유 문구, 재시작 상태 초기화"
+    - "심사 관점 앱 이름, 설명, 아이콘, 저장소 사용 여부"
+  deploy:
+    - "업로드 전 git status와 unrelated dirty file 분리"
+    - "secpay.ait 생성과 AITReader inspection"
+    - "업로드 후 console status/versionName 확인"
+  ux:
+    - "첫 화면 CTA 즉시 노출"
+    - "결과 화면 금액/시간/랭크/공유 CTA 명확성"
+
+verification_gates:
+  - "package scripts 확인"
+  - "npm run api:check"
+  - "npm run build"
+  - "AITReader로 secpay.ait 내부 sources/index.html 확인"
+  - "release marker/version marker 확인"
+  - "legacy 광고 API 부재 확인"
+  - "현재 광고 API 존재 확인"
+
+mode_verification:
+  ad-qa:
+    - "full-screen 광고 load/show 문자열과 이벤트 흐름 확인"
+    - "sandbox와 Toss App QR/private scheme 테스트 필요 항목 분리"
+  deploy:
+    - "AIT appName, deploymentId, 내부 HTML marker 확인"
+    - "Toss console status/versionName 확인"
+
+forbidden:
+  - "승인 없는 Toss 콘솔 업로드"
+  - "승인 없는 production deploy"
+  - "환경변수 값 출력"
+  - "token/secret/credential 출력"
+  - "live 광고 ID 반복 테스트"
+
+special_rules:
+  - "source 정상만으로 출시 가능하다고 판단하지 않는다. AIT 내부 산출물을 확인한다."
+  - "secpay.ait는 일반 zip으로 열지 않는다. AITReader를 사용한다."
+  - "Toss console versionName과 HTML 내부 release marker는 다를 수 있다."
+  - "sandbox에서는 in-app ads가 지원되지 않을 수 있으므로 광고 미노출을 코드 문제로 단정하지 않는다."
+  - "광고 검증은 Toss App private scheme 또는 QR 환경을 별도 gate로 둔다."
+  - "업로드 성공은 심사 준비 완료와 다르다. console 상태와 실제 앱 테스트를 분리한다."
+
+severity:
+  BLOCKER:
+    - "AIT 번들이 생성되지 않음"
+    - "생성된 AIT 내부 HTML이 최신 소스와 다름"
+    - "Toss WebView에서 시작/결과/다시하기 핵심 루프가 작동하지 않음"
+    - "legacy 광고 API가 실제 번들에 남아 있음"
+    - "secret, token, key가 번들 또는 로그에 노출됨"
+  HIGH:
+    - "광고 load/show flow가 잘못되어 실제 노출 가능성이 낮음"
+    - "sandbox 광고 미지원과 실제 코드 문제를 구분하지 못함"
+    - "모바일 작은 화면에서 CTA가 가려짐"
+    - "콘솔 업로드 후 version/status 확인이 누락됨"
+  MEDIUM:
+    - "카피가 장황하거나 Toss 앱 맥락에 맞지 않음"
+    - "애니메이션 성능 리스크"
+    - "debug/analytics 확인 부족"
+    - "테스트 스크립트가 오래된 public URL을 기준으로 검증함"
+  LOW:
+    - "문구 다듬기"
+    - "작은 시각적 polish"
+    - "문서화 보완"
+
+environment_notes:
+  - "local browser"
+  - "dist/web"
+  - "AIT bundle"
+  - "Toss Sandbox App"
+  - "실제 Toss App private scheme 또는 QR"
+
+report_sections:
+  - "결론"
+  - "확인한 증거"
+  - "BLOCKER"
+  - "HIGH"
+  - "MEDIUM"
+  - "LOW"
+  - "미검증 항목"
+  - "적용 전 필요한 승인"
+  - "다음 실행안"

@@ -1,0 +1,49 @@
+project:
+  name: "자동화 파이프라인"
+  type: "automation-pipeline"
+  agent_role: "자동화 파이프라인 운영 점검 에이전트"
+  description: "스케줄러, 배치 작업, 알림, 로그, 재시도, 중복 실행을 점검하는 자동화 프로젝트"
+
+core_focus:
+  - "스케줄러/트리거/핸들러 경로"
+  - "입력 데이터, 출력 artifact, 알림 destination"
+  - "중복 실행과 idempotency"
+  - "로그, 실패 복구, 재시도 정책"
+  - "secret/env 로딩과 출력 누출 방지"
+
+mode_focus:
+  audit:
+    - "최근 실행 로그와 산출물 freshness"
+    - "실패 시 알림 도달 여부"
+  fix:
+    - "최소 변경으로 실패 원인만 수정"
+  deploy:
+    - "스케줄러 반영 전 dry-run과 rollback 방법"
+
+verification_gates:
+  - "스케줄러 설정 또는 실행 entrypoint 확인"
+  - "dry-run 또는 test mode 실행"
+  - "최근 로그, exit code, 산출물 생성 여부 확인"
+  - "알림 전송은 mock/no-send 경로 우선 확인"
+
+forbidden:
+  - "승인 없는 live 알림 대량 전송"
+  - "승인 없는 스케줄러 재시작"
+  - "secret/env 값 출력"
+  - "state 파일 임의 삭제"
+
+special_rules:
+  - "실제 전송/발행/주문/결제는 dry-run과 분리한다."
+  - "중복 실행 방지 장치가 없으면 production 실행을 BLOCKER로 표시한다."
+
+severity:
+  BLOCKER:
+    - "중복 실행으로 외부 부작용이 발생할 수 있음"
+    - "secret이 로그나 메시지에 노출됨"
+  HIGH:
+    - "실패해도 알림이 오지 않음"
+    - "dry-run 없이 live 실행만 존재함"
+  MEDIUM:
+    - "로그가 부족해 실패 원인 추적이 어려움"
+  LOW:
+    - "운영 문서 또는 runbook 부족"

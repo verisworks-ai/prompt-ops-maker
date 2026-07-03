@@ -1,0 +1,230 @@
+{
+  "routes": [],
+  "entities": [
+    {
+      "name": "ProjectConfig",
+      "storage": "configs/*.yaml",
+      "fields": [
+        "project.name",
+        "project.type",
+        "project.root",
+        "project.domain",
+        "core_focus",
+        "mode_focus",
+        "verification_gates",
+        "forbidden",
+        "severity"
+      ],
+      "exposed_at": [
+        "fable5_prompt_maker.py make"
+      ]
+    },
+    {
+      "name": "TypePreset",
+      "storage": "configs/_types/*.yaml",
+      "fields": [
+        "project.type",
+        "core_focus",
+        "mode_focus",
+        "verification_gates",
+        "severity"
+      ],
+      "exposed_at": [
+        "fable5_prompt_maker.py make-adhoc"
+      ]
+    },
+    {
+      "name": "PromptArtifact",
+      "storage": "outputs/*.md or explicit --output path",
+      "fields": [
+        "project",
+        "mode",
+        "task",
+        "effort",
+        "target_ai",
+        "environment",
+        "verification_gates",
+        "forbidden",
+        "report_sections"
+      ],
+      "exposed_at": [
+        "outputs/",
+        "stdout --dry-run"
+      ]
+    }
+  ],
+  "external_services": [
+    {
+      "name": "Local Python Runtime",
+      "type": "cli-runtime",
+      "env": [],
+      "used_by": [
+        "fable5_prompt_maker.py",
+        "tests/test_prompt_maker.py"
+      ]
+    },
+    {
+      "name": "PyYAML",
+      "type": "python-package",
+      "env": [],
+      "used_by": [
+        "fable5_prompt_maker.py"
+      ]
+    },
+    {
+      "name": "Optional Local Documentation Store",
+      "type": "local-documentation",
+      "env": [],
+      "used_by": [
+        "operator-maintained project notes"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "name": "list-projects",
+      "schedule": "manual",
+      "handler": "python3 fable5_prompt_maker.py list-projects",
+      "auth": "required"
+    },
+    {
+      "name": "list-types",
+      "schedule": "manual",
+      "handler": "python3 fable5_prompt_maker.py list-types",
+      "auth": "required"
+    },
+    {
+      "name": "make-project-prompt",
+      "schedule": "manual",
+      "handler": "python3 fable5_prompt_maker.py make --project <project> --mode <mode> --task <task>",
+      "auth": "required"
+    },
+    {
+      "name": "make-adhoc-prompt",
+      "schedule": "manual",
+      "handler": "python3 fable5_prompt_maker.py make-adhoc --name <name> --type <type> --task <task>",
+      "auth": "required"
+    },
+    {
+      "name": "regression-test",
+      "schedule": "manual-before-release",
+      "handler": "python3 -m pytest -q",
+      "auth": "required"
+    }
+  ],
+  "agent_os": {
+    "projects": [
+      {
+        "id": "fable5-prompt-maker",
+        "name": "Fable 5 Prompt Maker / Prompt Ops Maker",
+        "status": "local-tool-ontology-captured"
+      }
+    ],
+    "agents": [
+      {
+        "id": "implementation-agent",
+        "role": "implementation-ontology-capture-verification"
+      },
+      {
+        "id": "review-agent",
+        "role": "research-strategy-copy-review"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "surface-cli",
+        "type": "cli",
+        "project_context_id": "fable5-prompt-maker",
+        "artifacts": [
+          "fable5_prompt_maker.py",
+          "configs/*.yaml",
+          "configs/_types/*.yaml"
+        ]
+      },
+      {
+        "id": "surface-tests",
+        "type": "quality-gate",
+        "project_context_id": "fable5-prompt-maker",
+        "artifacts": [
+          "tests/test_prompt_maker.py",
+          "pytest output"
+        ]
+      }
+    ],
+    "tasks": [
+      {
+        "id": "sanitize-public-name-and-readme",
+        "project_context_id": "fable5-prompt-maker",
+        "owner_agent": "implementation-agent",
+        "status": "pending"
+      },
+      {
+        "id": "add-pyproject-console-script",
+        "project_context_id": "fable5-prompt-maker",
+        "owner_agent": "implementation-agent",
+        "status": "pending"
+      },
+      {
+        "id": "add-github-actions-test",
+        "project_context_id": "fable5-prompt-maker",
+        "owner_agent": "implementation-agent",
+        "status": "pending"
+      },
+      {
+        "id": "refresh-examples-appintoss-playmcp-web-public",
+        "project_context_id": "fable5-prompt-maker",
+        "owner_agent": "implementation-agent",
+        "status": "pending"
+      }
+    ],
+    "skills": [
+      {
+        "id": "prompt-ops-maker"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "cli-engine",
+        "project_context_id": "fable5-prompt-maker",
+        "path": "fable5_prompt_maker.py"
+      },
+      {
+        "id": "project-configs",
+        "project_context_id": "fable5-prompt-maker",
+        "path": "configs/*.yaml"
+      },
+      {
+        "id": "type-presets",
+        "project_context_id": "fable5-prompt-maker",
+        "path": "configs/_types/*.yaml"
+      },
+      {
+        "id": "regression-tests",
+        "project_context_id": "fable5-prompt-maker",
+        "path": "tests/test_prompt_maker.py"
+      }
+    ],
+    "relations": [
+      {
+        "source": "surface-cli",
+        "relation": "reads",
+        "target": "project-configs"
+      },
+      {
+        "source": "surface-cli",
+        "relation": "reads",
+        "target": "type-presets"
+      },
+      {
+        "source": "surface-cli",
+        "relation": "produces",
+        "target": "PromptArtifact"
+      },
+      {
+        "source": "surface-tests",
+        "relation": "verifies",
+        "target": "cli-engine"
+      }
+    ]
+  }
+}
