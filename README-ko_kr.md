@@ -128,6 +128,46 @@ api      API/server 검증
 generic  범용 실행 환경
 ```
 
+## v2: Layered Cognition
+
+v2는 규칙을 어기는 것이 구조적으로 불가능한 6단계 레이어 체인을 도입한다.
+
+```text
+레이어  이름          역할
+──────────────────────────────────────────────────────────────────────────
+L0     Scope         작업 경계와 금지 행동 — 에이전트가 범위 밖으로 나갈 수 없음
+L1     Evidence      모든 발견에 evidence_ids 필수 — 증거 없는 주장 불가
+L2     Analyze       수집된 증거만 기반으로 구조적 분석
+L3     Hypothesize   L1 증거에 연결된 순위별 가설
+L4     Critique      L3 가설을 공개 전 적대적으로 검토
+L5     Report        결론 먼저: 결론 → 증거 → BLOCKER/HIGH → 미검증 항목
+```
+
+evidence_ids는 스키마 수준에서 필수다. `evidence_ids`가 없는 finding은 직렬화 자체가 불가 — 게이트가 지시문이 아니라 코드다.
+
+### MCP 서버 (v2)
+
+```bash
+cd mcp_server
+python3 -m uvicorn server:app
+```
+
+tools 4개: `analyze_prompt`, `generate_prompt`, `list_types`, `get_layer_chain`  
+resources 2개: `layer_specs`, `service_ontology`  
+prompt 1개: `ops_workflow`
+
+### 모델 어댑터
+
+```text
+어댑터    특화
+──────────────────────────────────────────────
+claude   확장 추론, evidence-first 보고
+codex    코드+테스트 검증 게이트
+gemini   리서치/비교 분석
+hermes   skill/tool/gateway 환경
+generic  모델별 특화 없음
+```
+
 ## 검증
 
 ```bash

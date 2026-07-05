@@ -344,24 +344,68 @@ prompt-ops-maker make-adhoc \
   --dry-run
 ```
 
+## v2: Layered Cognition
+
+v2 introduces a 6-layer chain that makes violations structurally impossible, not just discouraged.
+
+```text
+Layer  Name          What it enforces
+──────────────────────────────────────────────────────────────────────────────
+L0     Scope         Task boundary and deny list — agent cannot drift outside
+L1     Evidence      All findings must have evidence_ids — no claim without proof
+L2     Analyze       Structured analysis against collected evidence only
+L3     Hypothesize   Ranked hypotheses, each tied to L1 evidence
+L4     Critique      Adversarial review of L3 hypotheses before surfacing
+L5     Report        Result-first report: conclusion → evidence → BLOCKER/HIGH → unverified
+```
+
+Evidence IDs are required at the schema level. A finding without `evidence_ids` cannot be serialized — the gate is code, not instructions.
+
+### MCP server (v2)
+
+```bash
+cd mcp_server
+python3 -m uvicorn server:app
+```
+
+Four tools: `analyze_prompt`, `generate_prompt`, `list_types`, `get_layer_chain`  
+Two resources: `layer_specs`, `service_ontology`  
+One prompt: `ops_workflow`
+
+### Model adapters
+
+```text
+Adapter   Tuning
+──────────────────────────────────────────────────
+claude    Extended thinking, evidence-first report
+codex     Code + test verification gates
+gemini    Research / comparison analysis
+hermes    Skill/tool/gateway environment
+generic   No model-specific tuning
+```
+
 ## Architecture
 
 ```text
 prompt-ops-maker/
 ├── prompt_ops_maker.py          ← public CLI entry
 ├── fable5_prompt_maker.py       ← compatibility wrapper
+├── core/
+│   ├── layers.py                ← LayerSpec model, CHAIN_ORDER
+│   ├── composer.py              ← layer + adapter → prompt render
+│   └── validator.py             ← JSON schema gate (code, not LLM)
+├── adapters/                    ← claude/codex/gemini/hermes/generic
+├── mcp_server/server.py         ← FastMCP 4 tools + 2 resources + 1 prompt
 ├── configs/
+│   ├── layers/                  ← L0_scope.yaml ~ L5_report.yaml
 │   ├── examples/
-│   │   ├── mobile-miniapp.yaml                 ← sanitized example config
-│   │   ├── public-real-estate-service.yaml     ← sanitized example config
-│   │   └── brand-hub.yaml                      ← sanitized example config
+│   │   ├── mobile-miniapp.yaml
+│   │   ├── public-real-estate-service.yaml
+│   │   └── brand-hub.yaml
 │   └── _types/
-│       ├── generic.yaml
-│       ├── automation-pipeline.yaml
-│       ├── web-public.yaml
-│       └── mobile-miniapp.yaml
-├── tests/test_prompt_maker.py   ← CLI, prompt, and analyzer regression tests
-├── service-ontology.json        ← optional service ontology manifest
+├── schemas/                     ← evidence_ledger / findings / critique JSON schemas
+├── tests/test_prompt_maker.py
+├── service-ontology.json        ← service ontology manifest
 ├── examples/README.md
 └── docs/ontology-notes/README.md
 ```

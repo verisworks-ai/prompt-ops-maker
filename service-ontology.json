@@ -115,9 +115,12 @@
   "agent_os": {
     "projects": [
       {
-        "id": "fable5-prompt-maker",
-        "name": "Fable 5 Prompt Maker / Prompt Ops Maker",
-        "status": "local-tool-ontology-captured"
+        "id": "prompt-ops-maker",
+        "name": "prompt-ops-maker v2 (Layered Cognition)",
+        "status": "v2-layered-cognition-live",
+        "architecture": "L0-L1-L2-L3-L4-L5 chain",
+        "key_invariant": "evidence_ids required on all findings",
+        "updated_at": "2026-07-05"
       }
     ],
     "agents": [
@@ -184,9 +187,42 @@
     ],
     "artifacts": [
       {
+        "id": "layered-cognition-core",
+        "project_context_id": "prompt-ops-maker",
+        "path": "core/layers.py + core/composer.py + core/validator.py"
+      },
+      {
+        "id": "model-adapters",
+        "project_context_id": "prompt-ops-maker",
+        "path": "adapters/__init__.py",
+        "models": [
+          "claude",
+          "codex",
+          "gemini",
+          "hermes",
+          "generic"
+        ]
+      },
+      {
+        "id": "layer-configs",
+        "project_context_id": "prompt-ops-maker",
+        "path": "configs/layers/L0_scope.yaml ~ L5_report.yaml"
+      },
+      {
+        "id": "mcp-server",
+        "project_context_id": "prompt-ops-maker",
+        "path": "mcp_server/server.py",
+        "tools": [
+          "build_layer_prompt",
+          "validate_output",
+          "build_chain_prompts",
+          "analyze_prompt"
+        ]
+      },
+      {
         "id": "cli-engine",
-        "project_context_id": "fable5-prompt-maker",
-        "path": "fable5_prompt_maker.py"
+        "project_context_id": "prompt-ops-maker",
+        "path": "prompt_ops_maker.py"
       },
       {
         "id": "project-configs",
