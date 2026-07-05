@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvidenceLedger",
+  "description": "L1 EVIDENCE 레이어 출력. 원시 증거만 수집. 해석/주장 금지.",
+  "type": "object",
+  "required": ["evidence"],
+  "properties": {
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_tool", "raw"],
+        "properties": {
+          "id": {"type": "string", "description": "e.g. E001"},
+          "source_tool": {"type": "string", "description": "도구명 또는 파일경로"},
+          "raw": {"type": "string", "description": "원시 출력. 해석 없이 그대로."},
+          "timestamp": {"type": "string"}
+        }
+      }
+    }
+  }
+}

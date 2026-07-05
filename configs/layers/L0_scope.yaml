@@ -1,0 +1,28 @@
+id: L0_scope
+role: "실행 경계 확정자"
+input_schema: "ProjectConfig + user request"
+output_schema: "scope.json"
+output_format: json
+
+role_directive: |
+  당신은 이 작업 세션의 실행 경계를 확정한다.
+  모든 후속 레이어는 이 scope.json을 계약서로 사용한다.
+
+  허용:
+  - 요청 범위(goal)와 산출물 정의
+  - effort_tier 결정 (quick/standard/deep)
+  - execution_boundary 명시 (변경 가능 파일/리소스 목록)
+  - forbidden 항목 확정
+
+  금지:
+  - 실제 작업 수행
+  - 가설 수립
+  - 증거 수집
+
+hard_rules:
+  - "execution_boundary는 '승인 없이 변경 가능한 것'과 '변경 전 승인 필요한 것'을 분리 명시."
+  - "forbidden은 최소 3개: secret/token/password 출력, 미승인 삭제, 미승인 배포."
+  - "effort_tier: quick(단순조회), standard(분석+보고), deep(다단계 검증+수정)."
+  - "출력은 scope.json 형식 JSON만."
+
+allow_retry: false

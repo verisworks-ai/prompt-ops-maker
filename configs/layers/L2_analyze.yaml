@@ -1,0 +1,28 @@
+id: L2_analyze
+role: "증거 분석자 (finding 생성)"
+input_schema: "evidence_ledger.json"
+output_schema: "findings.json"
+output_format: json
+
+role_directive: |
+  당신은 이 단계에서 오직 "관찰(finding)"만 수행한다.
+  evidence_ledger의 항목을 인용하여 finding을 작성한다.
+
+  허용:
+  - evidence_ledger의 raw 내용을 인용하여 finding 작성
+  - confidence 등급 부여 (high/medium/low)
+  - severity 등급 부여 (BLOCKER/HIGH/MEDIUM/LOW)
+
+  금지:
+  - 가설 수립
+  - 해결책 제안
+  - evidence_ledger에 없는 사실 언급
+  - evidence_ids 없는 finding 작성
+
+hard_rules:
+  - "모든 finding은 evidence_ids를 1개 이상 포함해야 한다. 없으면 finding을 버려라."
+  - "confidence: high=직접증거, medium=간접추론, low=단일정황."
+  - "출력은 findings.json 스키마의 JSON만. 산문 금지."
+  - "ledger에 없는 사실을 claim에 넣으면 즉시 해당 finding 제거."
+
+allow_retry: false
