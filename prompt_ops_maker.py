@@ -77,6 +77,27 @@ ANALYZE_CHECKS = [
         "needles": ["도구", "tool", "command output", "명령", "파일", "source", "log"],
         "recommendation": "Require claims to be grounded in files, command output, logs, URL responses, screenshots, or tool results.",
     },
+    {
+        "id": "assumption_surfacing",
+        "label": "Assumption surfacing",
+        "severity": "MEDIUM",
+        "needles": ["assumption", "assume", "가정", "presuppose", "전제", "surface assumption", "가정을 명시"],
+        "recommendation": "Require the AI to state its assumptions before executing. Use --deep-reasoning to inject the full assumption scaffold.",
+    },
+    {
+        "id": "adversarial_check",
+        "label": "Adversarial / failure-mode check",
+        "severity": "MEDIUM",
+        "needles": ["failure mode", "what would this miss", "adversarial", "edge case", "abuse", "counter", "red team", "실패 시나리오", "놓친 것"],
+        "recommendation": "Require failure-mode and adversarial analysis, not just the happy path. Use --deep-reasoning or mode=deep-audit.",
+    },
+    {
+        "id": "confidence_calibration",
+        "label": "Confidence calibration",
+        "severity": "LOW",
+        "needles": ["confidence", "verified", "inferred", "unknown", "calibrat", "확신", "미확인", "불확실"],
+        "recommendation": "Require per-finding confidence levels (HIGH/MEDIUM/LOW) and an explicit UNKNOWN section. Use --deep-reasoning.",
+    },
 ]
 
 SEVERITY_PENALTY = {"BLOCKER": 30, "HIGH": 18, "MEDIUM": 10, "LOW": 5}
@@ -89,6 +110,7 @@ MODE_PURPOSES = {
     "seo-geo": "검색 노출, AI 인용, 구조화 데이터, discovery asset 상태를 평가해줘.",
     "appsec": "공개/비공개 경계, API 응답, secret 노출, 인증 흐름을 평가해줘.",
     "ux": "사용자 흐름과 CTA, 화면 깨짐, 결과/재시작 루프를 평가해줘.",
+    "deep-audit": "가정 명시 → 증거 체인 → 실행 → 적대적 패스 → 신뢰도 보정 순서로 전체 리스크를 심층 평가해줘.",
 }
 
 MODE_DEFAULT_DENY = {
@@ -99,6 +121,7 @@ MODE_DEFAULT_DENY = {
     "ux": ["파일 수정", "배포", "업로드"],
     "fix": ["unrelated file 수정", "승인 없는 배포", "승인 없는 DB 변경", "secret 출력"],
     "deploy": ["unrelated dirty file 포함", "secret 출력", "승인 범위 밖 배포"],
+    "deep-audit": ["파일 수정", "DB 변경", "배포", "업로드", "환경변수 값 출력", "가정을 사실로 보고"],
 }
 
 MODE_VERB = {
@@ -109,15 +132,22 @@ MODE_VERB = {
     "ux": "아직 수정하지 말고 UX만 평가해.",
     "fix": "이제 수정 단계로 전환한다. 단, 아래 승인된 항목만 수정해.",
     "deploy": "배포/업로드 단계로 전환한다. 승인된 변경사항만 반영해.",
+    "deep-audit": "수정하지 않는다. 아래 REASONING SCAFFOLD를 단계별로 이행하면서 심층 평가만 해.",
 }
 
 TARGET_AI_GUIDANCE = {
     "fable5": {
         "label": "Claude Fable 5",
         "items": [
-            "장기 목표를 끝까지 추적하되 평가와 실행 경계를 지켜.",
-            "내부 추론은 공개하지 말고 결론, 증거, 미검증 항목만 보고해.",
-            "중간 보고 전에는 이번 세션의 도구 결과와 주장 일치 여부를 확인해.",
+            "RESEARCH → PLAN → EXECUTE → VERIFY → REPORT 순서로 진행하고 단계를 건너뛰지 마.",
+            "실행 전 가정 3개를 명시해. 형식: ASSUMPTION: <내용> | BASIS: <근거> | RISK IF WRONG: <영향>. 검증 가능하면 먼저 검증해.",
+            "모든 주장에 증거 체인을 붙여. 형식: CLAIM → SOURCE(파일:줄번호 또는 명령 출력) → CONFIDENCE(HIGH/MEDIUM/LOW). SOURCE 없으면 HYPOTHESIS로 표시해.",
+            "결론을 내기 전에 적대적 패스를 실행해. '이 분석이 놓친 것은 무엇인가? 어떤 입력이나 환경이 이 결론을 깨뜨리는가?' 를 구체적으로 답해.",
+            "지식 상태를 3단계로 구분해. VERIFIED(직접 확인), INFERRED(검증된 사실에서 추론), UNKNOWN(확인 불가 항목과 해소 방법).",
+            "검증은 단일 패스가 아니다. (a) 요구사항 충족 여부 (b) 인접 기능 영향 (c) 적대적 패스에서 발견한 실패 모드 — 세 단계를 모두 거쳐.",
+            "해피패스만 감사하지 마. 각 흐름마다 실패 모드 1개, 엣지 케이스 1개, 오남용 시나리오 1개를 포함해.",
+            "확신이 낮으면 모호한 언어로 채우지 말고 불확실성의 원인과 해소 실험을 명시해.",
+            "보고서 끝에 캘리브레이션 블록을 추가해. CONFIDENT(>90%), NEEDS_CONFIRMATION(50-90%), OPEN_QUESTION(<50%) 3단계로 분류해. OPEN_QUESTION은 절대 생략하지 마.",
         ],
     },
     "claude": {
@@ -220,6 +250,45 @@ ENVIRONMENT_GUIDANCE = {
         ],
     },
 }
+
+
+FABLE5_REASONING_SCAFFOLD = """\
+## REASONING SCAFFOLD (필수 — 순서대로 이행)
+
+### Phase 0 — 가정 명시 (분석·실행 전에 완료)
+이 작업에 대한 가정 3개를 아래 형식으로 작성해. 검증 가능한 가정은 진행 전에 검증해.
+- ASSUMPTION: <한 문장>
+- BASIS: <근거 — 증거 또는 관례>
+- RISK IF WRONG: <틀렸을 때 분석에 미치는 영향>
+- VERIFIABLE NOW?: yes → 먼저 검증 / no → 플래그 리스크로 보유
+
+### Phase 1 — 증거 체인 (모든 발견 항목에 적용)
+결론만 보고하지 마. 각 발견 항목은 아래 구조를 따라:
+- CLAIM: <발견 내용, 한 문장>
+- SOURCE: <파일:줄번호, 명령 + 출력, 또는 설정 키 — 직접 확인 가능한 것>
+- REASONING: <SOURCE가 CLAIM을 지지하는 이유, 1-2 문장>
+- CONFIDENCE: HIGH(직접 검증) | MEDIUM(검증된 사실에서 추론) | LOW(그럴 듯하나 미검증)
+SOURCE가 없는 발견 항목은 "HYPOTHESIS"로 표시하고 Open Questions로 이동해.
+
+### Phase 2 — 적대적 패스 (분석 완료 후 실행)
+자신의 분석에 질문해: "내가 놓친 것은 무엇인가?" 구체적으로 답해:
+1. 검토하지 않은 입력, 설정, 환경은 무엇인가?
+2. HIGH 확신 발견 항목 중 SOURCE가 가장 약한 것은? 재검토해.
+3. 내 결론을 틀리게 만들고 싶은 사람이 무엇을 지적할까?
+수정 사항이 있으면 새 발견 항목으로 추가해. 기존 항목을 몰래 수정하지 마.
+
+### Phase 3 — 캘리브레이션 보고서 (출력의 마지막 섹션, 필수)
+발견 항목별 신뢰도 표:
+| 발견 항목 | 확신도 | 확신을 바꿀 조건 |
+|-----------|--------|-----------------|
+
+종합:
+- VERIFIED: <건수> 발견 항목
+- INFERRED: <건수> 발견 항목
+- UNKNOWN: <각 항목 + 가장 저렴한 해소 방법>
+
+UNKNOWN 섹션은 절대 생략하지 마. 비어 있으면 분석이 불완전하다는 신호다.
+"""
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -446,6 +515,7 @@ def render_prompt(
     effort: str,
     target_ai: str = "fable5",
     environment: str = "local",
+    deep_reasoning: bool = False,
 ) -> str:
     display_name = config["project"]["name"]
     project_type = config["project"].get("type", project)
@@ -490,6 +560,8 @@ def render_prompt(
 
     text += f"\n대상 AI 지침:\n{numbered(target_items)}\n"
     text += f"\n실행 환경 지침:\n{numbered(env_items)}\n"
+    if deep_reasoning or mode == "deep-audit":
+        text += f"\n{FABLE5_REASONING_SCAFFOLD}\n"
     if focus_items:
         text += f"\n점검 범위:\n{numbered(focus_items)}\n"
     if gates:
@@ -615,6 +687,7 @@ def make(args: argparse.Namespace) -> int:
         effort=args.effort,
         target_ai=args.target_ai,
         environment=args.environment,
+        deep_reasoning=getattr(args, "deep_reasoning", False),
     )
     return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"{args.project} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
 
@@ -629,6 +702,7 @@ def make_adhoc(args: argparse.Namespace) -> int:
         effort=args.effort,
         target_ai=args.target_ai,
         environment=args.environment,
+        deep_reasoning=getattr(args, "deep_reasoning", False),
     )
     return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"adhoc / {args.type} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
 
@@ -639,6 +713,12 @@ def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh"])
     parser.add_argument("--target-ai", default="fable5", choices=sorted(TARGET_AI_GUIDANCE.keys()))
     parser.add_argument("--environment", default="local", choices=sorted(ENVIRONMENT_GUIDANCE.keys()))
+    parser.add_argument(
+        "--deep-reasoning",
+        action="store_true",
+        dest="deep_reasoning",
+        help="Inject the Fable 5 reasoning scaffold (assumption surfacing, evidence chains, adversarial pass, confidence calibration). Auto-enabled for --mode=deep-audit.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="print without writing")
     parser.add_argument("--output", help="write prompt to a specific file")
 
