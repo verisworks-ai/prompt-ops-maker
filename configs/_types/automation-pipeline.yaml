@@ -8,6 +8,7 @@ core_focus:
   - "스케줄러/트리거/핸들러 경로"
   - "입력 데이터, 출력 artifact, 알림 destination"
   - "중복 실행과 idempotency"
+  - "콘텐츠 지문(fingerprint), 최근 게시 이력, 제목·본문 유사도 기반 중복 콘텐츠 차단"
   - "로그, 실패 복구, 재시도 정책"
   - "secret/env 로딩과 출력 누출 방지"
 
@@ -23,6 +24,8 @@ mode_focus:
 verification_gates:
   - "스케줄러 설정 또는 실행 entrypoint 확인"
   - "dry-run 또는 test mode 실행"
+  - "생성·게시 전 idempotency key와 콘텐츠 fingerprint가 최근 게시 이력과 충돌하지 않는지 확인"
+  - "동일 제목, 동일 본문, 높은 유사도 콘텐츠는 no-send/mock 경로에서 skip 처리되는지 확인"
   - "최근 로그, exit code, 산출물 생성 여부 확인"
   - "알림 전송은 mock/no-send 경로 우선 확인"
 
@@ -35,14 +38,18 @@ forbidden:
 special_rules:
   - "실제 전송/발행/주문/결제는 dry-run과 분리한다."
   - "중복 실행 방지 장치가 없으면 production 실행을 BLOCKER로 표시한다."
+  - "포스팅 파이프라인은 실행 단위 idempotency와 콘텐츠 단위 fingerprint를 별도 검증한다."
+  - "중복 콘텐츠가 감지되면 재작성·대체 주제 선택·skip 중 하나로 종료하고 live 발행하지 않는다."
 
 severity:
   BLOCKER:
     - "중복 실행으로 외부 부작용이 발생할 수 있음"
+    - "동일 콘텐츠가 반복 게시될 수 있음"
     - "secret이 로그나 메시지에 노출됨"
   HIGH:
     - "실패해도 알림이 오지 않음"
     - "dry-run 없이 live 실행만 존재함"
+    - "최근 게시 이력 또는 콘텐츠 fingerprint 없이 발행함"
   MEDIUM:
     - "로그가 부족해 실패 원인 추적이 어려움"
   LOW:

@@ -162,6 +162,34 @@ def test_adhoc_prompt_supports_codex_and_mcp_environment():
     assert "## 미검증 항목" in out
 
 
+def test_automation_pipeline_prompt_includes_content_dedup_guards():
+    result = run_cli(
+        "make-adhoc",
+        "--name",
+        "todayfinder",
+        "--type",
+        "automation-pipeline",
+        "--task",
+        "포스팅 파이프라인에서 동일한 내용을 계속 올리는 문제",
+        "--mode",
+        "fix",
+        "--target-ai",
+        "codex",
+        "--environment",
+        "local",
+        "--dry-run",
+    )
+
+    assert result.returncode == 0, result.stderr
+    out = result.stdout
+    assert "콘텐츠 fingerprint" in out
+    assert "최근 게시 이력" in out
+    assert "동일 제목" in out
+    assert "동일 본문" in out
+    assert "skip" in out
+    assert "live 발행하지 않는다" in out
+
+
 def test_project_prompt_can_target_claude_and_discord_environment():
     result = run_cli(
         "make",
