@@ -757,6 +757,26 @@ def analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _apply_post_generation(prompt: str, args: argparse.Namespace, config: dict[str, Any], label: str) -> int:
+    if args.loop:
+        prompt, report = loop_until_threshold(
+            prompt,
+            threshold=args.threshold,
+            max_iterations=args.max_iterations,
+            name=label,
+            record_lessons=not args.no_lessons,
+        )
+        prompt += "\n## Prompt Ops Loop Report\n" + yaml.safe_dump(report, allow_unicode=True, sort_keys=False)
+    if getattr(args, "self_verify", False):
+        prompt += self_verify_block(threshold=args.threshold, max_iterations=min(args.max_iterations, 2))
+    if getattr(args, "promptspec", False):
+        gates = config.get("verification_gates", [])
+        spec_text = render_promptspec(prompt, task=args.task, target_ai=args.target_ai, effort=args.effort, gates=gates if isinstance(gates, list) else [])
+        out_path = args.output.replace(".md", ".promptspec.yaml") if args.output else None
+        return write_or_print(spec_text, dry_run=args.dry_run, output=out_path, label=label + " [promptspec]")
+    return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=label)
+
+
 def make(args: argparse.Namespace) -> int:
     config = project_config(args.project)
     prompt = render_prompt(
@@ -770,16 +790,7 @@ def make(args: argparse.Namespace) -> int:
         deep_reasoning=getattr(args, "deep_reasoning", False),
         include_lessons=not getattr(args, "no_lessons", False),
     )
-    if args.loop:
-        prompt, report = loop_until_threshold(
-            prompt,
-            threshold=args.threshold,
-            max_iterations=args.max_iterations,
-            name=f"{args.project}/{args.mode}",
-            record_lessons=not args.no_lessons,
-        )
-        prompt += "\n## Prompt Ops Loop Report\n" + yaml.safe_dump(report, allow_unicode=True, sort_keys=False)
-    return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"{args.project} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
+    return _apply_post_generation(prompt, args, config, f"{args.project} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
 
 
 def make_adhoc(args: argparse.Namespace) -> int:
@@ -795,16 +806,7 @@ def make_adhoc(args: argparse.Namespace) -> int:
         deep_reasoning=getattr(args, "deep_reasoning", False),
         include_lessons=not getattr(args, "no_lessons", False),
     )
-    if args.loop:
-        prompt, report = loop_until_threshold(
-            prompt,
-            threshold=args.threshold,
-            max_iterations=args.max_iterations,
-            name=f"adhoc/{args.type}/{args.mode}",
-            record_lessons=not args.no_lessons,
-        )
-        prompt += "\n## Prompt Ops Loop Report\n" + yaml.safe_dump(report, allow_unicode=True, sort_keys=False)
-    return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"adhoc / {args.type} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
+    return _apply_post_generation(prompt, args, config, f"adhoc / {args.type} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
 
 
 _LLM_MODEL_ALIASES: dict[str, str] = {
@@ -970,6 +972,62 @@ def verify(args: argparse.Namespace) -> int:
     return 0 if payload["passed"] else 1
 
 
+def self_verify_block(threshold: int = 90, max_iterations: int = 2) -> str:
+    return f"""
+## Self-Verification Protocol (Fable 5 — 완료 전 필수 실행)
+
+이 블록은 외부 verifier 없이 네가 직접 출력을 검증하는 rubric이다.
+완료를 선언하기 전에 아래 루프를 실행해. 최대 {max_iterations}회 재시도.
+
+### Rubric (9항목 — 각 true/false로 자기 채점)
+1. execution_boundary — 승인 없이 변경 금지 항목(파일/DB/배포/업로드)이 명시됐는가?
+2. deny_list — 금지 행동 목록(비밀값/파괴적 명령/private route)이 있는가?
+3. verification_gates — 완료 증거(테스트/파일/URL/로그)가 구체적으로 열거됐는가?
+4. unverified_reporting — 미검증 항목이 완료와 분리돼 보고됐는가?
+5. evidence_first_report — 결론 → 증거 → BLOCKER/HIGH 순서로 보고됐는가?
+6. tool_result_grounding — 모든 주장에 파일:줄번호 또는 명령 출력이 근거로 붙었는가?
+7. assumption_surfacing — 실행 전 가정 3개가 명시됐는가?
+8. adversarial_check — 실패 모드 1개, 엣지 케이스 1개가 포함됐는가?
+9. confidence_calibration — CONFIDENT/NEEDS_CONFIRMATION/OPEN_QUESTION 블록이 있는가?
+
+### 판정
+- 9/9 true → 완료 선언 가능
+- false 항목 있음 → 해당 섹션 보완 후 재채점 (최대 {max_iterations}회)
+- {max_iterations}회 후에도 false 남으면 → UNVERIFIED 항목으로 명시하고 완료 선언
+
+### 재시도 조건
+false 항목 발견 시 해당 섹션만 보완 (전체 재생성 금지).
+"""
+
+
+def render_promptspec(
+    prompt: str,
+    *,
+    task: str,
+    target_ai: str,
+    effort: str,
+    gates: list[str],
+) -> str:
+    spec = {
+        "version": "1.0",
+        "target_ai": target_ai,
+        "effort": effort,
+        "task": task,
+        "system": prompt,
+        "sub_agents": [
+            {"role": "verifier", "model": "haiku", "trigger": "after each major step", "rubric": "prompt-ops 9-check"},
+        ],
+        "verification_gates": gates or ["task output exists", "no unverified items remain"],
+        "checkpoint_schedule": {
+            "interval": "after each EXECUTE phase",
+            "artifact": ".prompt-ops/checkpoint.json",
+            "resume_from_last": True,
+        },
+        "self_verify": {"enabled": True, "max_iterations": 2, "threshold": 90},
+    }
+    return yaml.safe_dump(spec, allow_unicode=True, sort_keys=False, default_flow_style=False)
+
+
 def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--mode", default="audit", choices=sorted(MODE_PURPOSES.keys()))
     parser.add_argument("--task", required=True)
@@ -988,6 +1046,82 @@ def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--threshold", type=int, default=90, help="minimum score for --loop or verify gates")
     parser.add_argument("--max-iterations", type=int, default=3, help="maximum auto-improvement iterations for --loop")
     parser.add_argument("--no-lessons", action="store_true", help="do not inject or write .prompt-ops/lessons.md")
+    parser.add_argument("--self-verify", action="store_true", dest="self_verify", help="append Fable 5 self-verification rubric block to generated prompt")
+    parser.add_argument("--promptspec", action="store_true", help="output .promptspec YAML (system+sub_agents+gates+checkpoints) instead of markdown")
+
+
+def run_agentic(args: argparse.Namespace) -> int:
+    """Run a generated prompt against LLM with eval cases and report pass rate."""
+    import requests
+
+    prompt_path = Path(args.prompt).expanduser()
+    if not prompt_path.exists():
+        raise SystemExit(f"prompt file not found: {prompt_path}")
+    prompt_text = prompt_path.read_text(encoding="utf-8")
+
+    evals_path = Path(args.evals).expanduser()
+    if not evals_path.exists():
+        raise SystemExit(f"evals file not found: {evals_path}")
+    cases: list[dict[str, Any]] = yaml.safe_load(evals_path.read_text(encoding="utf-8")) or []
+
+    model_id = _LLM_MODEL_ALIASES.get(args.model, args.model)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "proxy-passthrough")
+    proxy_base = args.proxy or "http://localhost:8317"
+    use_oai = model_id.startswith(_OPENAI_COMPAT_PREFIXES)
+
+    results = []
+    for i, case in enumerate(cases):
+        user_input: str = case.get("input", "")
+        expect: str = case.get("expect", "")
+        label: str = case.get("label", f"case-{i+1}")
+
+        if use_oai:
+            url = f"{proxy_base}/v1/chat/completions"
+            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+            payload: dict[str, Any] = {"model": model_id, "max_tokens": 800, "messages": [
+                {"role": "system", "content": prompt_text},
+                {"role": "user", "content": user_input},
+            ]}
+        else:
+            url = f"{proxy_base}/v1/messages"
+            headers = {"Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": api_key}
+            payload = {"model": model_id, "max_tokens": 800, "system": prompt_text,
+                       "messages": [{"role": "user", "content": user_input}]}
+
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            resp.raise_for_status()
+            raw = resp.json()
+            if use_oai:
+                output = raw.get("choices", [{}])[0].get("message", {}).get("content", "")
+            else:
+                output = next((b["text"] for b in raw.get("content", []) if b.get("type") == "text"), "")
+            passed = expect.lower() in output.lower() if expect else True
+            results.append({"label": label, "passed": passed, "expect": expect, "got": output[:120]})
+        except Exception as e:
+            results.append({"label": label, "passed": False, "expect": expect, "got": f"ERROR: {e}"})
+
+    passed_count = sum(1 for r in results if r["passed"])
+    total = len(results)
+    pass_rate = round(passed_count / total * 100) if total else 0
+    overall_pass = pass_rate >= args.threshold
+
+    report = {"model": model_id, "pass_rate": pass_rate, "passed": overall_pass,
+              "threshold": args.threshold, "cases": results}
+
+    if args.record_lessons and not overall_pass:
+        failed = [r["label"] for r in results if not r["passed"]]
+        append_lesson(f"run --agentic failed: {pass_rate}% < {args.threshold}%. Failed cases: {', '.join(failed)}")
+
+    if args.failures_out:
+        fpath = Path(args.failures_out).expanduser()
+        fpath.parent.mkdir(parents=True, exist_ok=True)
+        failed_cases = [c for c, r in zip(cases, results) if not r["passed"]]
+        fpath.write_text(json.dumps(failed_cases, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"failures written: {fpath}")
+
+    print(yaml.safe_dump(report, allow_unicode=True, sort_keys=False), end="")
+    return 0 if overall_pass else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1032,6 +1166,18 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("--verifier-model", default="deterministic-local-verifier", help="label for the independent verifier used in reports")
     verify_parser.add_argument("--record-lessons", action="store_true", help="append failed verification patterns to .prompt-ops/lessons.md")
     verify_parser.set_defaults(func=verify)
+
+    run_parser = sub.add_parser("run", help="run a prompt against LLM with eval cases and report pass rate")
+    run_parser.add_argument("--prompt", "-p", required=True, help="generated prompt .md file")
+    run_parser.add_argument("--evals", "-e", required=True, help="eval cases YAML (list of {label, input, expect})")
+    run_parser.add_argument("--model", default="haiku", help="model alias (haiku/sonnet/fable5/gpt-mini/gemini)")
+    run_parser.add_argument("--threshold", type=int, default=80, help="minimum pass rate %% to succeed")
+    run_parser.add_argument("--agentic", action="store_true", help="flag: running in agentic mode (enables failures output)")
+    run_parser.add_argument("--failures-out", default="feedback/failures.jsonl", help="write failed cases to this file")
+    run_parser.add_argument("--record-lessons", action="store_true", help="append failures to .prompt-ops/lessons.md")
+    run_parser.add_argument("--proxy", default="http://localhost:8317", help="proxy base URL")
+    run_parser.set_defaults(func=run_agentic)
+
     return parser
 
 

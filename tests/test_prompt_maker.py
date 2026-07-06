@@ -255,6 +255,44 @@ def test_analyze_prompt_text_output_can_be_written(tmp_path):
     assert str(output) in result.stdout
 
 
+def test_verify_fails_below_threshold_with_independent_report(tmp_path):
+    prompt = tmp_path / "weak_prompt.txt"
+    prompt.write_text("Fix it quickly.", encoding="utf-8")
+
+    result = run_cli("verify", "--input", str(prompt), "--threshold", "90", "--format", "json")
+
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["verifier_model"] == "deterministic-local-verifier"
+    assert data["passed"] is False
+    assert data["analysis"]["score"] < 90
+
+
+def test_make_adhoc_loop_appends_loop_report():
+    result = run_cli(
+        "make-adhoc",
+        "--name",
+        "불멍 UI",
+        "--type",
+        "web-public",
+        "--task",
+        "탭하면 메뉴가 같이 번쩍이는 문제 개선",
+        "--loop",
+        "--threshold",
+        "100",
+        "--max-iterations",
+        "2",
+        "--no-lessons",
+        "--dry-run",
+    )
+
+    assert result.returncode == 0, result.stderr
+    out = result.stdout
+    assert "Prompt Ops Loop Report" in out
+    assert "final_score: 100" in out
+    assert "passed: true" in out
+
+
 def test_mcp_resources_reject_path_traversal():
     pytest.importorskip("mcp")
     from mcp_server.server import get_config, get_schema
