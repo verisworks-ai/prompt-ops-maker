@@ -496,7 +496,6 @@ generic   No model-specific tuning
 ```text
 prompt-ops-maker/
 ├── prompt_ops_maker.py          ← public CLI entry
-├── fable5_prompt_maker.py       ← compatibility wrapper
 ├── core/
 │   ├── layers.py                ← LayerSpec model, CHAIN_ORDER
 │   ├── composer.py              ← layer + adapter → prompt render
