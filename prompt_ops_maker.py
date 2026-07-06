@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 import textwrap
 from pathlib import Path
@@ -21,6 +22,7 @@ CONFIG_DIR = ROOT / "configs"
 EXAMPLE_CONFIG_DIR = CONFIG_DIR / "examples"
 TYPE_DIR = CONFIG_DIR / "_types"
 OUTPUT_DIR = ROOT / "outputs"
+DEFAULT_LESSONS_PATH = Path.cwd() / ".prompt-ops" / "lessons.md"
 
 REPORT_SECTIONS = [
     "결론",
@@ -516,6 +518,7 @@ def render_prompt(
     target_ai: str = "fable5",
     environment: str = "local",
     deep_reasoning: bool = False,
+    include_lessons: bool = True,
 ) -> str:
     display_name = config["project"]["name"]
     project_type = config["project"].get("type", project)
@@ -572,6 +575,8 @@ def render_prompt(
         text += f"\n금지:\n{bullet(dry_boundaries)}\n"
     if special_rules:
         text += f"\n특수 규칙:\n{numbered(special_rules)}\n"
+    if include_lessons:
+        text += lessons_block()
 
     sev = severity_block(config)
     if sev:
@@ -654,6 +659,81 @@ def format_analysis(analysis: dict[str, Any], output_format: str) -> str:
     return render_analysis_text(analysis)
 
 
+def read_lessons(path: Path = DEFAULT_LESSONS_PATH) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8").strip()
+
+
+def append_lesson(text: str, path: Path = DEFAULT_LESSONS_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+    existing = path.read_text(encoding="utf-8") if path.exists() else "# Prompt Ops Lessons\n\n"
+    path.write_text(existing.rstrip() + f"\n\n## {stamp}\n{text.strip()}\n", encoding="utf-8")
+
+
+def lessons_block(path: Path = DEFAULT_LESSONS_PATH) -> str:
+    lessons = read_lessons(path)
+    if not lessons:
+        return ""
+    lines = [line for line in lessons.splitlines() if line.strip()]
+    tail = "\n".join(lines[-20:])
+    return f"\n축적된 lessons/state:\n{tail}\n"
+
+
+def improve_prompt_from_analysis(prompt: str, analysis: dict[str, Any]) -> str:
+    if not analysis["missing"]:
+        return prompt
+    additions = [
+        "## Prompt Ops Auto-Improvement",
+        "아래 항목은 독립 verifier가 발견한 누락 게이트다. 실행자는 본문 지침과 함께 반드시 적용해.",
+        "",
+    ]
+    for item in analysis["missing"]:
+        additions.append(f"- [{item['severity']}] {item['id']}: {item['recommendation']}")
+    additions.extend(
+        [
+            "",
+            "완료 전 위 항목을 다시 점검하고, 충족하지 못한 항목은 미검증/차단 사유로 보고해.",
+        ]
+    )
+    return prompt.rstrip() + "\n\n" + "\n".join(additions).strip() + "\n"
+
+
+def loop_until_threshold(
+    prompt: str,
+    *,
+    threshold: int,
+    max_iterations: int,
+    name: str,
+    record_lessons: bool,
+) -> tuple[str, dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    current = prompt
+    iterations = max(1, max_iterations)
+    for index in range(1, iterations + 1):
+        analysis = analyze_prompt_text(current, name=f"{name} iteration {index}")
+        history.append({"iteration": index, "score": analysis["score"], "missing": [item["id"] for item in analysis["missing"]]})
+        if analysis["score"] >= threshold:
+            break
+        current = improve_prompt_from_analysis(current, analysis)
+
+    final = analyze_prompt_text(current, name=f"{name} final")
+    report = {
+        "threshold": threshold,
+        "max_iterations": iterations,
+        "final_score": final["score"],
+        "passed": final["score"] >= threshold,
+        "history": history,
+        "final_missing": [item["id"] for item in final["missing"]],
+    }
+    if record_lessons and not report["passed"]:
+        append_lesson(
+            f"Loop for {name} stopped at {final['score']}/100. Remaining: {', '.join(report['final_missing']) or 'none'}"
+        )
+    return current, report
+
+
 def analyze(args: argparse.Namespace) -> int:
     if args.input == "-":
         source = sys.stdin.read()
@@ -688,7 +768,17 @@ def make(args: argparse.Namespace) -> int:
         target_ai=args.target_ai,
         environment=args.environment,
         deep_reasoning=getattr(args, "deep_reasoning", False),
+        include_lessons=not getattr(args, "no_lessons", False),
     )
+    if args.loop:
+        prompt, report = loop_until_threshold(
+            prompt,
+            threshold=args.threshold,
+            max_iterations=args.max_iterations,
+            name=f"{args.project}/{args.mode}",
+            record_lessons=not args.no_lessons,
+        )
+        prompt += "\n## Prompt Ops Loop Report\n" + yaml.safe_dump(report, allow_unicode=True, sort_keys=False)
     return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"{args.project} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
 
 
@@ -703,8 +793,154 @@ def make_adhoc(args: argparse.Namespace) -> int:
         target_ai=args.target_ai,
         environment=args.environment,
         deep_reasoning=getattr(args, "deep_reasoning", False),
+        include_lessons=not getattr(args, "no_lessons", False),
     )
+    if args.loop:
+        prompt, report = loop_until_threshold(
+            prompt,
+            threshold=args.threshold,
+            max_iterations=args.max_iterations,
+            name=f"adhoc/{args.type}/{args.mode}",
+            record_lessons=not args.no_lessons,
+        )
+        prompt += "\n## Prompt Ops Loop Report\n" + yaml.safe_dump(report, allow_unicode=True, sort_keys=False)
     return write_or_print(prompt, dry_run=args.dry_run, output=args.output, label=f"adhoc / {args.type} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
+
+
+_LLM_MODEL_ALIASES: dict[str, str] = {
+    "haiku": "claude-haiku-4-5-20251001",
+    "sonnet": "claude-sonnet-4-6",
+    "fable5": "claude-fable-5",
+    "opus": "claude-opus-4-8",
+}
+
+_LLM_VERIFIER_SYSTEM = """You are an independent prompt-ops verifier. Your only job is to score a prompt against 9 criteria and return structured JSON. You have no context from the prompt's author."""
+
+_LLM_VERIFIER_USER_TMPL = """Score this prompt against each criterion. Return ONLY valid JSON — no explanation, no markdown.
+
+PROMPT TO EVALUATE:
+---
+{prompt}
+---
+
+Criteria (answer true/false for each):
+1. execution_boundary — Does it state what the agent must NOT change without approval (files, DB, deploy, uploads)?
+2. deny_list — Does it have an explicit deny list (secrets, destructive commands, private routes)?
+3. verification_gates — Does it list exact evidence required before completion (tests, files, URLs, logs)?
+4. unverified_reporting — Does it require unverified items to be reported separately?
+5. evidence_first_report — Does it define a result-first report with conclusion + evidence + blockers?
+6. tool_result_grounding — Does it require claims grounded in files/command output/logs/URLs?
+7. assumption_surfacing — Does it require stating assumptions before executing?
+8. adversarial_check — Does it require failure-mode or adversarial analysis?
+9. confidence_calibration — Does it require per-finding confidence levels (HIGH/MEDIUM/LOW)?
+
+JSON format:
+{{"checks":{{"execution_boundary":true,"deny_list":true,"verification_gates":true,"unverified_reporting":true,"evidence_first_report":true,"tool_result_grounding":true,"assumption_surfacing":true,"adversarial_check":true,"confidence_calibration":true}},"reasoning":"one sentence each, semicolon-separated"}}"""
+
+
+def llm_verify_prompt(
+    prompt_text: str,
+    model_alias: str,
+    *,
+    proxy_url: str = "http://localhost:8317/v1/messages",
+    timeout: int = 60,
+) -> dict[str, Any]:
+    """Call LLM independently to verify prompt. Returns analysis-compatible dict."""
+    import requests  # lazy import — only needed for LLM verify path
+
+    model_id = _LLM_MODEL_ALIASES.get(model_alias, model_alias)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "proxy-passthrough")
+
+    payload = {
+        "model": model_id,
+        "max_tokens": 600,
+        "system": _LLM_VERIFIER_SYSTEM,
+        "messages": [{"role": "user", "content": _LLM_VERIFIER_USER_TMPL.format(prompt=prompt_text[:8000])}],
+    }
+    resp = requests.post(
+        proxy_url,
+        headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": api_key},
+        json=payload,
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    raw = resp.json()
+    text = next((b["text"] for b in raw.get("content", []) if b.get("type") == "text"), "{}")
+
+    # parse — strip markdown fences if present
+    cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        raise SystemExit(f"LLM verifier returned unparseable JSON:\n{text[:400]}")
+
+    checks_raw: dict[str, bool] = parsed.get("checks", {})
+    SEVERITY_MAP = {
+        "execution_boundary": "BLOCKER", "deny_list": "HIGH", "verification_gates": "HIGH",
+        "unverified_reporting": "MEDIUM", "evidence_first_report": "MEDIUM", "tool_result_grounding": "MEDIUM",
+        "assumption_surfacing": "MEDIUM", "adversarial_check": "MEDIUM", "confidence_calibration": "LOW",
+    }
+    checks = []
+    missing = []
+    present = []
+    for cid, severity in SEVERITY_MAP.items():
+        found = bool(checks_raw.get(cid, False))
+        checks.append({"id": cid, "severity": severity, "present": found})
+        if found:
+            present.append(cid)
+        else:
+            missing.append({"id": cid, "severity": severity})
+
+    penalty = sum(SEVERITY_PENALTY.get(item["severity"], 5) for item in missing)
+    return {
+        "name": "llm-verifier",
+        "score": max(0, 100 - penalty),
+        "summary": {
+            "present_checks": len(present),
+            "missing_checks": len(missing),
+            "secret_like_patterns": [],
+            "source_policy": f"llm-independent-verifier:{model_id}",
+            "reasoning": parsed.get("reasoning", ""),
+        },
+        "checks": checks,
+        "missing": missing,
+    }
+
+
+def verify(args: argparse.Namespace) -> int:
+    if args.input == "-":
+        source = sys.stdin.read()
+        name = args.name or "stdin"
+    else:
+        path = Path(args.input).expanduser()
+        if not path.exists():
+            raise SystemExit(f"prompt file not found: {path}")
+        source = path.read_text(encoding="utf-8")
+        name = args.name or path.name
+
+    use_llm = args.verifier_model not in ("deterministic-local-verifier", "local", "")
+    if use_llm:
+        analysis = llm_verify_prompt(source, args.verifier_model)
+    else:
+        analysis = analyze_prompt_text(source, name=name)
+    payload = {
+        "verifier_model": args.verifier_model,
+        "threshold": args.threshold,
+        "passed": analysis["score"] >= args.threshold,
+        "analysis": analysis,
+    }
+    rendered = json.dumps(payload, ensure_ascii=False, indent=2) + "\n" if args.format == "json" else yaml.safe_dump(payload, allow_unicode=True, sort_keys=False)
+    if args.output:
+        out = Path(args.output).expanduser()
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rendered, encoding="utf-8")
+        print(f"written: {out}")
+    else:
+        print(rendered, end="")
+    if args.record_lessons and not payload["passed"]:
+        missing = ", ".join(item["id"] for item in analysis["missing"]) or "none"
+        append_lesson(f"Verify failed for {name}: {analysis['score']}/100 below {args.threshold}. Missing: {missing}")
+    return 0 if payload["passed"] else 1
 
 
 def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
@@ -721,6 +957,10 @@ def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--dry-run", action="store_true", help="print without writing")
     parser.add_argument("--output", help="write prompt to a specific file")
+    parser.add_argument("--loop", action="store_true", help="run analyze/improve iterations until --threshold is reached")
+    parser.add_argument("--threshold", type=int, default=90, help="minimum score for --loop or verify gates")
+    parser.add_argument("--max-iterations", type=int, default=3, help="maximum auto-improvement iterations for --loop")
+    parser.add_argument("--no-lessons", action="store_true", help="do not inject or write .prompt-ops/lessons.md")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -755,6 +995,16 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--format", choices=["text", "json", "yaml"], default="text", help="analysis output format")
     analyze_parser.add_argument("--output", "-o", help="write analysis to a file")
     analyze_parser.set_defaults(func=analyze)
+
+    verify_parser = sub.add_parser("verify", help="independently verify a prompt score and fail below threshold")
+    verify_parser.add_argument("--input", "-i", required=True, help="prompt file path, or '-' for stdin")
+    verify_parser.add_argument("--name", help="optional display name for the verified prompt")
+    verify_parser.add_argument("--format", choices=["json", "yaml"], default="json", help="verification output format")
+    verify_parser.add_argument("--output", "-o", help="write verification report to a file")
+    verify_parser.add_argument("--threshold", type=int, default=90, help="minimum accepted score")
+    verify_parser.add_argument("--verifier-model", default="deterministic-local-verifier", help="label for the independent verifier used in reports")
+    verify_parser.add_argument("--record-lessons", action="store_true", help="append failed verification patterns to .prompt-ops/lessons.md")
+    verify_parser.set_defaults(func=verify)
     return parser
 
 
