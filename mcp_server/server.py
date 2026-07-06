@@ -17,7 +17,6 @@ Resources:
 """
 from __future__ import annotations
 
-import json
 import re
 import sys
 from pathlib import Path
@@ -30,10 +29,10 @@ try:
 except ImportError:
     raise SystemExit("mcp package not installed. Run: pip install mcp")
 
-from adapters import MODEL_ADAPTERS
-from core.composer import LayerComposer
-from core.layers import LayerSpec, LAYER_DIR, CHAIN_ORDER
-from core.validator import Validator
+from adapters import MODEL_ADAPTERS  # noqa: E402
+from core.composer import LayerComposer  # noqa: E402
+from core.layers import LayerSpec, LAYER_DIR, CHAIN_ORDER  # noqa: E402
+from core.validator import Validator  # noqa: E402
 
 CONFIG_DIR = ROOT / "configs"
 SCHEMA_DIR = ROOT / "schemas"
@@ -187,15 +186,15 @@ def layered_cognition(goal: str, model: str = "claude") -> str:
         f"## Layered Cognition 실행\n\n"
         f"목표: {goal}\n"
         f"모델: {model}\n\n"
-        f"실행 순서:\n"
+        "실행 순서:\n"
         f"1. `build_chain_prompts(model='{model}', task_context={{goal: ...}})` 호출\n"
-        f"2. 반환된 chain 배열을 L0 → L5 순서로 순차 실행\n"
-        f"3. 각 레이어 출력을 `validate_output(schema_name=...)` 으로 검증\n"
-        f"4. L4 critique의 verdict:\n"
-        f"   - pass → L5 실행\n"
-        f"   - re-collect → L1 재실행 (최대 2회)\n"
-        f"   - revise → L2/L3 재실행\n"
-        f"5. L5 리포트를 최종 산출물로 반환\n"
+        "2. 반환된 chain 배열을 L0 → L5 순서로 순차 실행\n"
+        "3. 각 레이어 출력을 `validate_output(schema_name=...)` 으로 검증\n"
+        "4. L4 critique의 verdict:\n"
+        "   - pass → L5 실행\n"
+        "   - re-collect → L1 재실행 (최대 2회)\n"
+        "   - revise → L2/L3 재실행\n"
+        "5. L5 리포트를 최종 산출물로 반환\n"
     )
 
 

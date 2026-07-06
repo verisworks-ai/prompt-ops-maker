@@ -6,7 +6,7 @@ ModelAdapter — 모델별 프롬프트 포맷 어댑터
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 

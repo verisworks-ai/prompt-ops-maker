@@ -40,7 +40,6 @@ class Validator:
             )
 
         required = self.schema.get("required", [])
-        props = self.schema.get("properties", {})
 
         for key in required:
             if key not in data:
