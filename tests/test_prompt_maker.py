@@ -7,21 +7,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "prompt_ops_maker.py"
-WRAPPER_CLI = ROOT / "fable5_prompt_maker.py"
 
 
 def run_cli(*args):
     return subprocess.run(
         [sys.executable, str(CLI), *args],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
-
-
-def run_wrapper_cli(*args):
-    return subprocess.run(
-        [sys.executable, str(WRAPPER_CLI), *args],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -120,14 +110,6 @@ def test_list_types_shows_generic_presets():
     assert "web-public" in result.stdout
     assert "automation-pipeline" in result.stdout
     assert "generic" in result.stdout
-
-
-def test_backward_compatible_fable5_wrapper_lists_types():
-    result = run_wrapper_cli("list-types")
-
-    assert result.returncode == 0, result.stderr
-    assert "automation-pipeline" in result.stdout
-    assert "web-public" in result.stdout
 
 
 def test_adhoc_prompt_supports_codex_and_mcp_environment():

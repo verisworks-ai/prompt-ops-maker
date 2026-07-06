@@ -129,8 +129,6 @@ python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
 ```
 
-`fable5_prompt_maker.py` remains as a compatibility wrapper for older local workflows.
-
 ## Quick start
 
 ### Project prompt

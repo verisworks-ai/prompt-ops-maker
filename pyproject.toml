@@ -29,7 +29,7 @@ mcp = ["mcp>=1.0"]
 prompt-ops-maker = "prompt_ops_maker:main"
 
 [tool.setuptools]
-py-modules = ["prompt_ops_maker", "fable5_prompt_maker"]
+py-modules = ["prompt_ops_maker"]
 packages = [
   "adapters",
   "configs",

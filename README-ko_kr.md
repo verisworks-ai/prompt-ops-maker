@@ -67,8 +67,6 @@ python3 prompt_ops_maker.py list-projects
 python3 prompt_ops_maker.py list-types
 ```
 
-`fable5_prompt_maker.py`는 기존 사용자를 위한 호환 wrapper다.
-
 ## 빠른 사용
 
 ```bash
