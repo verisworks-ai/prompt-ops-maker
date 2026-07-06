@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]" ruff build
+
+      - name: Compile
+        run: python -m compileall -q .
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Build package
+        run: python -m build --sdist --wheel
+
+      - name: Credential scan
+        run: |
+          if grep -rn --include="*.py" --include="*.json" --include="*.yaml" \
+            -E "(ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{35})" \
+            . --exclude-dir=.git 2>/dev/null; then
+            echo "::error::Credential pattern found in source"
+            exit 1
+          fi
+
+      - name: Personal info scan
+        run: |
+          if grep -rn --include="*.py" --include="*.json" --include="*.yaml" --include="*.md" \
+            -E "/Users/[a-zA-Z]+" \
+            . --exclude-dir=.git --exclude-dir=dist 2>/dev/null; then
+            echo "::error::Local user path found in tracked files"
+            exit 1
+          fi
+
+      - name: Schema validation
+        run: |
+          python -c "
+          import json, pathlib, sys
+          schema_dir = pathlib.Path('schemas')
+          if not schema_dir.exists():
+              sys.exit(0)
+          errors = []
+          for f in schema_dir.glob('**/*.json'):
+              try:
+                  json.loads(f.read_text())
+              except json.JSONDecodeError as e:
+                  errors.append(f'{f}: {e}')
+          if errors:
+              for e in errors: print(f'::error::{e}')
+              sys.exit(1)
+          print(f'schemas: {len(list(schema_dir.glob(\"**/*.json\")))} files valid ✓')
+          "
