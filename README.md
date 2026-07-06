@@ -14,6 +14,7 @@
 <p align="center">
   <a href="README-ko_kr.md">한국어</a> ·
   <a href="#quick-start">Quick start</a> ·
+  <a href="#fable-5-alignment-features">Fable 5 features</a> ·
   <a href="#security-first-reverse-analysis">Analyze prompts</a> ·
   <a href="#security-boundary">Security boundary</a>
 </p>
@@ -344,6 +345,114 @@ prompt-ops-maker make-adhoc \
   --dry-run
 ```
 
+## Fable 5 alignment features
+
+Three additions close the gap between a well-structured prompt and a prompt that forces consistent behavior across model families.
+
+### `--self-verify` — 9-item self-assessment rubric
+
+Appends a structured self-check block to the generated prompt. The model scores itself on 9 items before declaring completion.
+
+```bash
+prompt-ops-maker make-adhoc \
+  --name "Webhook monitor" \
+  --type automation-pipeline \
+  --task "Operational audit" \
+  --target-ai fable5 \
+  --self-verify \
+  --threshold 90 \
+  --max-iterations 2 \
+  --dry-run
+```
+
+Rubric items: execution boundary, deny list, verification gates, unverified reporting, evidence-first report, tool result grounding, assumption surfacing, adversarial check, confidence calibration.
+
+A model that fails the rubric will retry (up to `--max-iterations`) before reporting done. Fable 5 actually reworks the output; smaller models tend to rubber-stamp ✓.
+
+### `--promptspec` — YAML mission spec
+
+Outputs a structured YAML spec alongside the prompt. Useful for passing structured context to orchestrators, codex-hermes, or MCP tools.
+
+```bash
+prompt-ops-maker make-adhoc \
+  --name "SEO audit" \
+  --type web-public \
+  --task "Launch readiness check" \
+  --target-ai fable5 \
+  --promptspec \
+  --dry-run
+```
+
+Spec fields: `version`, `target_ai`, `sub_agents`, `verification_gates`, `checkpoint_schedule`, `self_verify`.
+
+### `run --agentic` — eval-driven validation loop
+
+Run a generated prompt against eval cases and measure pass rate. Failures are logged to `feedback/failures.jsonl` and lessons are appended to `.prompt-ops/lessons.md`.
+
+```bash
+# evals/cases.yaml example:
+# - label: "exec boundary present"
+#   input: "Does this prompt have an execution boundary?"
+#   expect: "승인"
+# - label: "deny list check"
+#   input: "Are there forbidden actions?"
+#   expect: "금지"
+
+prompt-ops-maker run \
+  --prompt outputs/my-prompt.md \
+  --evals evals/cases.yaml \
+  --model haiku \
+  --threshold 80 \
+  --agentic \
+  --record-lessons
+```
+
+Returns exit 0 if pass rate ≥ threshold, exit 1 otherwise. Use in CI to gate prompt quality before committing.
+
+### Cross-model verifier
+
+Independent verification via any model family — Claude, GPT, or Gemini via the proxy API.
+
+```bash
+# Verify with multiple models independently:
+prompt-ops-maker verify --input my-prompt.md --verifier-model haiku
+prompt-ops-maker verify --input my-prompt.md --verifier-model gpt-mini
+prompt-ops-maker verify --input my-prompt.md --verifier-model gemini
+
+# Available aliases: haiku, sonnet, fable5, opus, gpt-mini, gpt, gpt5, codex, gemini, gemini-pro
+```
+
+Routes Claude models to `/v1/messages` and GPT/Gemini to `/v1/chat/completions` through `localhost:8317` (proxy).
+
+### Fable 5 vs smaller models — gap table
+
+The prompt structure works with any model. What differs is how strictly the structure is followed:
+
+```text
+Structure          Fable 5                            Haiku / Sonnet / GPT-mini
+──────────────────────────────────────────────────────────────────────────────────────
+execution_boundary Semantically understood — refuses   Treats it as one rule among many.
+                   out-of-scope work explicitly.       Scope creep on long contexts.
+
+verification_gates Actual checkpoint. FAIL → diagnose  Rubber-stamp: declares "PASS"
+                   → retry.                            without checking. No retry loop.
+
+9-item self-verify Checks output against each item.    All-pass bias. Quality degrades
+                   Self-detected errors → retry.       for later items in the list.
+
+promptspec YAML    Respects nested constraints and      Reflects top 2-3 fields. Deep
+                   cross-field interactions.            fields ignored. Schema drift.
+
+run --agentic      Multi-step state maintained. Error   Same action retried infinitely.
+                   → root cause → different approach.   Plan forgotten after ~5 steps.
+                                                        Early "done" declaration.
+
+recovery           FAIL → root cause analysis → new    Retry same failed action.
+                   strategy.                           No recovery strategy.
+```
+
+The structure is model-agnostic. The execution quality scales with model reasoning depth.
+
 ## v2: Layered Cognition
 
 v2 introduces a 6-layer chain that makes violations structurally impossible, not just discouraged.
@@ -423,10 +532,13 @@ python3 prompt_ops_maker.py analyze --input README.md --format json
 Current release smoke:
 
 ```text
-pytest                         9 passed
+pytest                         13 passed, 1 skipped
 list-projects                  examples/brand-hub, examples/mobile-miniapp, examples/public-real-estate-service
 list-types                     automation-pipeline, generic, mobile-miniapp, web-public
-clean editable install          prompt-ops-maker list-types OK
+self-verify dry-run            appends 9-item rubric block
+promptspec dry-run             outputs YAML spec
+run --agentic                  runs eval cases, writes failures.jsonl
+verify --verifier-model gpt-mini  LLM-based independent score
 ```
 
 ## Security and privacy boundary
