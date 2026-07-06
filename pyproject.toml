@@ -23,9 +23,27 @@ dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+mcp = ["mcp>=1.0"]
 
 [project.scripts]
 prompt-ops-maker = "prompt_ops_maker:main"
 
 [tool.setuptools]
 py-modules = ["prompt_ops_maker", "fable5_prompt_maker"]
+packages = [
+  "adapters",
+  "configs",
+  "configs._types",
+  "configs.examples",
+  "configs.layers",
+  "core",
+  "mcp_server",
+  "schemas",
+]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"configs._types" = ["*.yaml"]
+"configs.examples" = ["*.yaml"]
+"configs.layers" = ["*.yaml"]
+schemas = ["*.json"]

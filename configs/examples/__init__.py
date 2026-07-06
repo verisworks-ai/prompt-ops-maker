@@ -1,0 +1,1 @@
+"""Packaged example configuration resources."""
