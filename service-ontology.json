@@ -16,7 +16,7 @@
         "severity"
       ],
       "exposed_at": [
-        "fable5_prompt_maker.py make"
+        "prompt_ops_maker.py make"
       ]
     },
     {
@@ -30,7 +30,7 @@
         "severity"
       ],
       "exposed_at": [
-        "fable5_prompt_maker.py make-adhoc"
+        "prompt_ops_maker.py make-adhoc"
       ]
     },
     {
@@ -59,7 +59,7 @@
       "type": "cli-runtime",
       "env": [],
       "used_by": [
-        "fable5_prompt_maker.py",
+        "prompt_ops_maker.py",
         "tests/test_prompt_maker.py"
       ]
     },
@@ -68,7 +68,7 @@
       "type": "python-package",
       "env": [],
       "used_by": [
-        "fable5_prompt_maker.py"
+        "prompt_ops_maker.py"
       ]
     },
     {
@@ -84,25 +84,25 @@
     {
       "name": "list-projects",
       "schedule": "manual",
-      "handler": "python3 fable5_prompt_maker.py list-projects",
+      "handler": "python3 prompt_ops_maker.py list-projects",
       "auth": "required"
     },
     {
       "name": "list-types",
       "schedule": "manual",
-      "handler": "python3 fable5_prompt_maker.py list-types",
+      "handler": "python3 prompt_ops_maker.py list-types",
       "auth": "required"
     },
     {
       "name": "make-project-prompt",
       "schedule": "manual",
-      "handler": "python3 fable5_prompt_maker.py make --project <project> --mode <mode> --task <task>",
+      "handler": "python3 prompt_ops_maker.py make --project <project> --mode <mode> --task <task>",
       "auth": "required"
     },
     {
       "name": "make-adhoc-prompt",
       "schedule": "manual",
-      "handler": "python3 fable5_prompt_maker.py make-adhoc --name <name> --type <type> --task <task>",
+      "handler": "python3 prompt_ops_maker.py make-adhoc --name <name> --type <type> --task <task>",
       "auth": "required"
     },
     {
@@ -139,7 +139,7 @@
         "type": "cli",
         "project_context_id": "fable5-prompt-maker",
         "artifacts": [
-          "fable5_prompt_maker.py",
+          "prompt_ops_maker.py",
           "configs/examples/*.yaml",
           "configs/_types/*.yaml"
         ]

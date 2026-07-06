@@ -77,7 +77,7 @@ BLOCKER
 - package/test 실행법 검증
 
 HIGH
-- CLI 명령명 범용화 검토: fable5_prompt_maker.py → prompt_maker.py 또는 aiprompt
+- CLI 명령명 범용화 완료: `prompt-ops-maker` console script와 `prompt_ops_maker.py` 직접 실행으로 통일
 - pyproject.toml 추가 및 console_scripts 제공
 - GitHub Actions 테스트 추가
 - examples/ 디렉토리 추가
