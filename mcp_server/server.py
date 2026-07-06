@@ -18,6 +18,7 @@ Resources:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -36,8 +37,18 @@ from core.validator import Validator
 
 CONFIG_DIR = ROOT / "configs"
 SCHEMA_DIR = ROOT / "schemas"
+SAFE_RESOURCE_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 mcp = FastMCP("prompt-ops-maker")
+
+
+def safe_resource_path(base: Path, name: str, suffix: str, *subdirs: str) -> Path | None:
+    """Resolve a named resource under base without allowing path traversal."""
+    if not SAFE_RESOURCE_NAME.fullmatch(name):
+        return None
+    candidate = (base.joinpath(*subdirs) / f"{name}{suffix}").resolve()
+    allowed_root = base.resolve()
+    return candidate if candidate.is_relative_to(allowed_root) else None
 
 
 # ── Tools ──────────────────────────────────────────────────────────────────
@@ -153,9 +164,9 @@ def analyze_prompt(
 @mcp.resource("config://{name}")
 def get_config(name: str) -> str:
     """YAML 설정 파일 반환 (configs/ 기준)."""
-    for subdir in ("", "_types/", "examples/", "layers/"):
-        p = CONFIG_DIR / subdir / f"{name}.yaml"
-        if p.exists():
+    for subdir in ("", "_types", "examples", "layers"):
+        p = safe_resource_path(CONFIG_DIR, name, ".yaml", subdir) if subdir else safe_resource_path(CONFIG_DIR, name, ".yaml")
+        if p and p.exists():
             return p.read_text()
     return f"Config not found: {name}"
 
@@ -163,8 +174,8 @@ def get_config(name: str) -> str:
 @mcp.resource("schema://{name}")
 def get_schema(name: str) -> str:
     """JSON 스키마 파일 반환."""
-    p = SCHEMA_DIR / f"{name}.schema.json"
-    return p.read_text() if p.exists() else f"Schema not found: {name}"
+    p = safe_resource_path(SCHEMA_DIR, name, ".schema.json")
+    return p.read_text() if p and p.exists() else f"Schema not found: {name}"
 
 
 # ── Prompts ────────────────────────────────────────────────────────────────

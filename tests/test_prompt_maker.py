@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "prompt_ops_maker.py"
 WRAPPER_CLI = ROOT / "fable5_prompt_maker.py"
@@ -251,3 +253,14 @@ def test_analyze_prompt_text_output_can_be_written(tmp_path):
     assert "Secret-like patterns: 0 detected" in text
     assert "Verification gates: present" in text
     assert str(output) in result.stdout
+
+
+def test_mcp_resources_reject_path_traversal():
+    pytest.importorskip("mcp")
+    from mcp_server.server import get_config, get_schema
+
+    assert "Config not found" in get_config("../pyproject")
+    assert "Config not found" in get_config("examples/brand-hub")
+    assert "Schema not found" in get_schema("../pyproject")
+    assert "project:" in get_config("brand-hub")
+    assert '"type"' in get_schema("findings")
