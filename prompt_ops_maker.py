@@ -808,11 +808,23 @@ def make_adhoc(args: argparse.Namespace) -> int:
 
 
 _LLM_MODEL_ALIASES: dict[str, str] = {
+    # Claude (Anthropic /v1/messages)
     "haiku": "claude-haiku-4-5-20251001",
     "sonnet": "claude-sonnet-4-6",
     "fable5": "claude-fable-5",
     "opus": "claude-opus-4-8",
+    # GPT (OpenAI /v1/chat/completions)
+    "gpt-mini": "gpt-5.4-mini",
+    "gpt": "gpt-5.4",
+    "gpt5": "gpt-5.5",
+    "codex": "gpt-5.3-codex-spark",
+    # Gemini (OpenAI /v1/chat/completions)
+    "gemini": "gemini-3-flash",
+    "gemini-pro": "gemini-3.1-pro-low",
 }
+
+# Models that use OpenAI-compatible /v1/chat/completions endpoint
+_OPENAI_COMPAT_PREFIXES = ("gpt-", "gemini-", "codex-")
 
 _LLM_VERIFIER_SYSTEM = """You are an independent prompt-ops verifier. Your only job is to score a prompt against 9 criteria and return structured JSON. You have no context from the prompt's author."""
 
@@ -842,30 +854,45 @@ def llm_verify_prompt(
     prompt_text: str,
     model_alias: str,
     *,
-    proxy_url: str = "http://localhost:8317/v1/messages",
+    proxy_base: str = "http://localhost:8317",
     timeout: int = 60,
 ) -> dict[str, Any]:
-    """Call LLM independently to verify prompt. Returns analysis-compatible dict."""
+    """Call LLM independently to verify prompt. Routes Claude→/v1/messages, GPT/Gemini→/v1/chat/completions."""
     import requests  # lazy import — only needed for LLM verify path
 
     model_id = _LLM_MODEL_ALIASES.get(model_alias, model_alias)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "proxy-passthrough")
+    use_openai_compat = model_id.startswith(_OPENAI_COMPAT_PREFIXES)
 
-    payload = {
-        "model": model_id,
-        "max_tokens": 600,
-        "system": _LLM_VERIFIER_SYSTEM,
-        "messages": [{"role": "user", "content": _LLM_VERIFIER_USER_TMPL.format(prompt=prompt_text[:8000])}],
-    }
-    resp = requests.post(
-        proxy_url,
-        headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": api_key},
-        json=payload,
-        timeout=timeout,
-    )
+    if use_openai_compat:
+        url = f"{proxy_base}/v1/chat/completions"
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+        payload: dict[str, Any] = {
+            "model": model_id,
+            "max_tokens": 600,
+            "messages": [
+                {"role": "system", "content": _LLM_VERIFIER_SYSTEM},
+                {"role": "user", "content": _LLM_VERIFIER_USER_TMPL.format(prompt=prompt_text[:8000])},
+            ],
+        }
+    else:
+        url = f"{proxy_base}/v1/messages"
+        headers = {"Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": api_key}
+        payload = {
+            "model": model_id,
+            "max_tokens": 600,
+            "system": _LLM_VERIFIER_SYSTEM,
+            "messages": [{"role": "user", "content": _LLM_VERIFIER_USER_TMPL.format(prompt=prompt_text[:8000])}],
+        }
+
+    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
     raw = resp.json()
-    text = next((b["text"] for b in raw.get("content", []) if b.get("type") == "text"), "{}")
+
+    if use_openai_compat:
+        text = raw.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+    else:
+        text = next((b["text"] for b in raw.get("content", []) if b.get("type") == "text"), "{}")
 
     # parse — strip markdown fences if present
     cleaned = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
