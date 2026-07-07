@@ -6,6 +6,11 @@ on:
   pull_request:
 
 jobs:
+  security:
+    uses: verisworks-ai/.github/.github/workflows/security-baseline.yml@main
+    with:
+      language: python
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -33,24 +38,6 @@ jobs:
 
       - name: Build package
         run: python -m build --sdist --wheel
-
-      - name: Credential scan
-        run: |
-          if grep -rn --include="*.py" --include="*.json" --include="*.yaml" \
-            -E "(ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{35})" \
-            . --exclude-dir=.git 2>/dev/null; then
-            echo "::error::Credential pattern found in source"
-            exit 1
-          fi
-
-      - name: Personal info scan
-        run: |
-          if grep -rn --include="*.py" --include="*.json" --include="*.yaml" --include="*.md" \
-            -E "/Users/[a-zA-Z]+" \
-            . --exclude-dir=.git --exclude-dir=dist 2>/dev/null; then
-            echo "::error::Local user path found in tracked files"
-            exit 1
-          fi
 
       - name: Schema validation
         run: |
