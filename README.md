@@ -347,6 +347,21 @@ prompt-ops-maker make-adhoc \
 
 Three additions close the gap between a well-structured prompt and a prompt that forces consistent behavior across model families.
 
+Generated prompts now add four default controls before task-specific checks:
+
+```text
+Control                    Purpose
+────────────────────────────────────────────────────────────────────────────
+Variable chain control      Select lean / standard / deep L0-L5 behavior by effort, mode, and risk markers
+Context state protocol      Preserve chunk_id, evidence_id, checkpoints, and resume state for long contexts
+External validation hook    Prevent L4 self-critique from rubber-stamping without test/build/curl/schema evidence
+Prompt keyword lint         Label `verify` verdicts as prompt-text checks, not runtime execution proof
+```
+
+This does not emulate Fable 5 native adaptive thinking. It turns the observed behavior into explicit operating rules that smaller models can follow and reviewers can verify.
+
+The self-check block is advisory. `prompt-ops-maker verify` returns `external_verdict.verdict` from deterministic prompt keyword checks. That output proves the prompt contains required guardrails; it does not prove tests, builds, HTTP probes, or browser smokes actually passed.
+
 ### `--self-verify` — 9-item self-assessment rubric
 
 Appends a structured self-check block to the generated prompt. The model scores itself on 9 items before declaring completion.
@@ -365,7 +380,7 @@ prompt-ops-maker make-adhoc \
 
 Rubric items: execution boundary, deny list, verification gates, unverified reporting, evidence-first report, tool result grounding, assumption surfacing, adversarial check, confidence calibration.
 
-A model that fails the rubric will retry (up to `--max-iterations`) before reporting done. Fable 5 actually reworks the output; smaller models tend to rubber-stamp ✓.
+A model that fails the rubric will retry (up to `--max-iterations`) before reporting done. This is only a helper loop; runtime completion still requires separate execution evidence.
 
 ### `--promptspec` — YAML mission spec
 

@@ -22,6 +22,13 @@ CRITIQUE_CHECKS = [
     ("verification_gates", "모든 게이트를 통과한 증거가 있는가?"),
     ("evidence_first_report", "결론이 확인한 증거보다 먼저 나오는가?"),
     ("effort_calibration", "effort_tier 대비 과잉/과소 분석인가?"),
+    ("external_verification", "자기 감사만으로 닫은 항목이 있는가? 가능한 테스트/빌드/스키마/curl 검증을 분리했는가?"),
+]
+
+CONTEXT_STATE_PROTOCOL = [
+    "context_budget: 입력이 길면 evidence ledger를 chunk_id 단위로 나누고 각 chunk마다 요약·근거·미검증 항목을 남긴다.",
+    "state_checkpoint: L2 이후 현재 결론, 열린 질문, 다음 검증 명령을 상태 블록으로 압축한다.",
+    "resume_rule: 맥락이 잘리면 마지막 state_checkpoint와 evidence_id만으로 재개한다.",
 ]
 
 REPORT_SECTIONS = [
@@ -78,9 +85,14 @@ class LayerComposer:
                 "<verdict_rules>\n"
                 "- violations 중 evidence 부족 → verdict: re-collect\n"
                 "- 논리 결함 → verdict: revise\n"
-                "- 이상 없음 → verdict: pass\n"
+                "- 외부 검증 없이 자기 감사로 닫은 high-risk 항목 → verdict: revise\n"
+                "- 이상 없음 → model_recommendation: pass (최종 verdict는 외부 하네스가 결정)\n"
                 "</verdict_rules>"
             )
+
+        if "evidence" in spec.id.value.lower() or "analyze" in spec.id.value.lower():
+            state_rules = "\n".join(f"- {rule}" for rule in CONTEXT_STATE_PROTOCOL)
+            sections.append(f"<context_state_protocol>\n{state_rules}\n</context_state_protocol>")
 
         # 6. L5 report gets section template
         if "report" in spec.id.value.lower():

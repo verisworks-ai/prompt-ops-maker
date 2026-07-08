@@ -31,7 +31,7 @@ except ImportError:
 
 from adapters import MODEL_ADAPTERS  # noqa: E402
 from core.composer import LayerComposer  # noqa: E402
-from core.layers import LayerSpec, LAYER_DIR, CHAIN_ORDER  # noqa: E402
+from core.layers import LayerSpec, LAYER_DIR, resolve_chain_order  # noqa: E402
 from core.validator import Validator  # noqa: E402
 
 CONFIG_DIR = ROOT / "configs"
@@ -119,7 +119,8 @@ def build_chain_prompts(
     composer = LayerComposer(adapter)
 
     specs = LayerSpec.load_all()
-    chain_specs = [specs[lid] for lid in CHAIN_ORDER if lid in specs]
+    chain_order = resolve_chain_order(task_context)
+    chain_specs = [specs[lid] for lid in chain_order if lid in specs]
 
     chain = []
     for spec in chain_specs:

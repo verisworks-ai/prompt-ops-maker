@@ -303,6 +303,108 @@ def test_make_adhoc_loop_appends_loop_report():
     assert "passed: true" in out
 
 
+def test_fable5_default_prompt_includes_variable_chain_context_and_external_validation():
+    result = run_cli(
+        "make-adhoc",
+        "--name",
+        "서비스 출시 점검",
+        "--type",
+        "web-public",
+        "--task",
+        "로그인 권한과 SSL 포함 출시 전 점검",
+        "--effort",
+        "high",
+        "--dry-run",
+    )
+
+    assert result.returncode == 0, result.stderr
+    out = result.stdout
+    assert "작업 체인 제어" in out
+    assert "L1/L2/L3는 L4 verdict" in out
+    assert "컨텍스트 관리 프로토콜" in out
+    assert "STATE CHECKPOINT" in out
+    assert "외부 검증 훅" in out
+    assert "프롬프트 키워드 린트" in out
+    assert "prompt_ops_maker.py verify" in out
+    assert "실행 산출물의 성공을 보증하지 않는다" in out
+    assert "자기 감사" in out
+    assert "검증되지 않은 내부 추론" in out
+
+
+def test_verify_outputs_deterministic_external_verdict_for_failed_prompt(tmp_path):
+    prompt = tmp_path / "weak_prompt.txt"
+    prompt.write_text("Fix it quickly.", encoding="utf-8")
+
+    result = run_cli("verify", "--input", str(prompt), "--threshold", "90", "--format", "json")
+
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["external_verdict"]["verdict_source"] == "prompt-keyword-lint"
+    assert data["external_verdict"]["scope"] == "prompt_text_only_no_runtime_execution_evidence"
+    assert data["external_verdict"]["verdict"] == "re-collect"
+    assert "verification_gates" in data["external_verdict"]["missing"]
+
+
+def test_verify_outputs_pass_external_verdict_for_generated_prompt(tmp_path):
+    prompt = tmp_path / "generated_prompt.md"
+    make_result = run_cli(
+        "make-adhoc",
+        "--name",
+        "서비스 출시 점검",
+        "--type",
+        "web-public",
+        "--task",
+        "로그인 권한과 SSL 포함 출시 전 점검",
+        "--effort",
+        "high",
+        "--no-lessons",
+        "--output",
+        str(prompt),
+    )
+    assert make_result.returncode == 0, make_result.stderr
+
+    verify_result = run_cli("verify", "--input", str(prompt), "--threshold", "90", "--format", "json")
+
+    assert verify_result.returncode == 0, verify_result.stderr
+    data = json.loads(verify_result.stdout)
+    assert data["external_verdict"]["verdict"] == "pass"
+    assert data["external_verdict"]["missing"] == []
+
+
+def test_resolve_chain_order_skips_middle_layers_for_low_effort_readonly_tasks():
+    from core.layers import LayerID, resolve_chain_order
+
+    chain = resolve_chain_order({"effort": "low", "mode": "ux", "goal": "버튼 문구 확인"})
+
+    assert chain == [
+        LayerID.L0_SCOPE,
+        LayerID.L1_EVIDENCE,
+        LayerID.L2_ANALYZE,
+        LayerID.L5_REPORT,
+    ]
+
+
+def test_resolve_chain_order_keeps_full_chain_for_security_release_tasks():
+    from core.layers import CHAIN_ORDER, resolve_chain_order
+
+    chain = resolve_chain_order({"effort": "medium", "mode": "audit", "goal": "auth security release check"})
+
+    assert chain == CHAIN_ORDER
+
+
+def test_mcp_chain_prompt_uses_resolved_chain_order():
+    pytest.importorskip("mcp")
+    from mcp_server.server import build_chain_prompts
+
+    result = build_chain_prompts(
+        model="generic",
+        task_context={"effort": "low", "mode": "ux", "goal": "문구 확인"},
+    )
+
+    layer_ids = [item["layer_id"] for item in result["chain"]]
+    assert layer_ids == ["L0_scope", "L1_evidence", "L2_analyze", "L5_report"]
+
+
 def test_mcp_resources_reject_path_traversal():
     pytest.importorskip("mcp")
     from mcp_server.server import get_config, get_schema
