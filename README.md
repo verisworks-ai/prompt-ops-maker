@@ -345,13 +345,14 @@ prompt-ops-maker make-adhoc \
 
 ## Fable 5 alignment features
 
-Three additions close the gap between a well-structured prompt and a prompt that forces consistent behavior across model families.
+Four additions close the gap between a well-structured prompt and a prompt that forces consistent behavior across model families.
 
-Generated prompts now add four default controls before task-specific checks:
+Generated prompts now add five default controls before task-specific checks:
 
 ```text
 Control                    Purpose
 ────────────────────────────────────────────────────────────────────────────
+Pre-scope unknown enum      List unknowns before entering L0 — missing_information, assumptions, out-of-scope risks, human confirmations
 Variable chain control      Select lean / standard / deep L0-L5 behavior by effort, mode, and risk markers
 Context state protocol      Preserve chunk_id, evidence_id, checkpoints, and resume state for long contexts
 External validation hook    Prevent L4 self-critique from rubber-stamping without test/build/curl/schema evidence
@@ -361,6 +362,33 @@ Prompt keyword lint         Label `verify` verdicts as prompt-text checks, not r
 This does not emulate Fable 5 native adaptive thinking. It turns the observed behavior into explicit operating rules that smaller models can follow and reviewers can verify.
 
 The self-check block is advisory. `prompt-ops-maker verify` returns `external_verdict.verdict` from deterministic prompt keyword checks. That output proves the prompt contains required guardrails; it does not prove tests, builds, HTTP probes, or browser smokes actually passed.
+
+### `--surface-unknowns` — pre-scope unknown enumeration
+
+Injects a mandatory unknown enumeration block before the prompt enters L0. Implements the Fable 5 "Finding Your Unknowns" pattern: enumerate what you don't know before starting, not after.
+
+```bash
+prompt-ops-maker make-adhoc \
+  --name "Deploy gate" \
+  --type automation-pipeline \
+  --task "Pre-release safety check" \
+  --target-ai fable5 \
+  --surface-unknowns \
+  --dry-run
+```
+
+The block requires the agent to list at least one item in each category before execution:
+
+```text
+Category                   What to enumerate
+────────────────────────────────────────────────────────────────────────────
+missing_information         Information not currently available
+assumptions_being_made      Unverified assumptions being treated as fact
+out_of_scope_risks          Risks outside this task that could affect results
+human_confirmation_needed   Items requiring human judgment before proceeding
+```
+
+Auto-included when `--deep-reasoning` or `--mode=deep-audit` is active.
 
 ### `--self-verify` — 9-item self-assessment rubric
 

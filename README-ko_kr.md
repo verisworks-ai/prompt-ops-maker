@@ -129,7 +129,34 @@ generic  범용 실행 환경
 
 ## Fable 5 정렬 기능
 
-세 가지 추가 기능이 구조화된 프롬프트와 모델 전반에서 일관된 동작을 강제하는 프롬프트 사이의 갭을 좁힌다.
+네 가지 추가 기능이 구조화된 프롬프트와 모델 전반에서 일관된 동작을 강제하는 프롬프트 사이의 갭을 좁힌다.
+
+### `--surface-unknowns` — 사전 미지 열거
+
+프롬프트가 L0에 진입하기 전에 미지 열거 블록을 주입한다. Fable 5 "Finding Your Unknowns" 패턴 구현: 시작 전에 모르는 것을 먼저 목록화한다.
+
+```bash
+prompt-ops-maker make-adhoc \
+  --name "배포 게이트" \
+  --type automation-pipeline \
+  --task "릴리스 전 안전 점검" \
+  --target-ai fable5 \
+  --surface-unknowns \
+  --dry-run
+```
+
+블록은 실행 전에 4개 범주 각각 1개 이상 열거를 강제한다:
+
+```text
+범주                       열거 대상
+────────────────────────────────────────────────────────────────────────────
+missing_information         현재 알 수 없는 정보
+assumptions_being_made      사실로 전제하고 있지만 검증하지 않은 것
+out_of_scope_risks          이 작업 밖이지만 결과에 영향 가능한 리스크
+human_confirmation_needed   AI가 판단하기 어렵고 사람이 확인해야 할 것
+```
+
+`--deep-reasoning` 또는 `--mode=deep-audit` 활성 시 자동 포함.
 
 ### `--self-verify` — 9항목 자기검증 루브릭
 
@@ -236,11 +263,12 @@ run --agentic      멀티스텝 상태 유지. 에러 → 원인 분석   동일
 
 v2는 규칙을 어기는 것이 구조적으로 불가능한 6단계 레이어 체인을 도입한다.
 
-기본 생성 프롬프트는 Fable 5의 네이티브 adaptive thinking을 흉내 낸다고 주장하지 않는다. 대신 소형 모델도 검토자가 확인 가능한 방식으로 따라 할 수 있도록 네 가지 운영 규칙을 명시한다.
+기본 생성 프롬프트는 Fable 5의 네이티브 adaptive thinking을 흉내 낸다고 주장하지 않는다. 대신 소형 모델도 검토자가 확인 가능한 방식으로 따라 할 수 있도록 다섯 가지 운영 규칙을 명시한다.
 
 ```text
 규칙                     목적
 ──────────────────────────────────────────────────────────────────────────
+사전 미지 열거            L0 진입 전 4개 범주 미지 항목 열거 강제 (Fable 5 "Finding Your Unknowns")
 가변 체인 제어            effort/mode/risk 기준으로 lean / standard / deep L0-L5 선택
 컨텍스트 상태 프로토콜     chunk_id, evidence_id, checkpoint, resume state 유지
 외부 검증 훅              L4 자기 감사가 test/build/curl/schema 증거 없이 통과하지 못하게 함

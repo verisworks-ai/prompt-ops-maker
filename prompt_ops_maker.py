@@ -254,6 +254,26 @@ ENVIRONMENT_GUIDANCE = {
 }
 
 
+SURFACE_UNKNOWNS_BLOCK = """\
+## 사전 미지 열거 (실행 전 필수)
+
+작업을 시작하기 전에 모르는 것을 먼저 열거해. 최소 5개, 많을수록 정확해진다.
+아래 4가지 범주로 분류해. 각 항목은 한 문장, 구체적으로.
+
+1. missing_information — 지금 알 수 없는 정보 (문서 미확인, 접근 불가, 명시 없음)
+2. assumptions_being_made — 현재 사실로 전제하는 것 (검증하지 않은 전제)
+3. out_of_scope_risks — 이 작업 범위 밖이지만 결과에 영향 가능한 리스크
+4. human_confirmation_needed — AI가 판단하기 어렵고 사람이 확인해야 할 것
+
+형식:
+- [missing_information] <한 문장>
+- [assumptions_being_made] <한 문장>
+- [out_of_scope_risks] <한 문장>
+- [human_confirmation_needed] <한 문장>
+
+열거 완료 후 L0 Scope 단계로 진입해. 열거 없이 실행 시작 금지.
+"""
+
 FABLE5_REASONING_SCAFFOLD = """\
 ## REASONING SCAFFOLD (필수 — 순서대로 이행)
 
@@ -649,6 +669,7 @@ def render_prompt(
     target_ai: str = "fable5",
     environment: str = "local",
     deep_reasoning: bool = False,
+    surface_unknowns: bool = False,
     include_lessons: bool = True,
 ) -> str:
     display_name = config["project"]["name"]
@@ -699,6 +720,8 @@ def render_prompt(
     text += f"\n{context_state_block(complexity)}"
     text += f"\n{external_validation_block(mode)}"
     text += f"\n{external_verdict_block(mode, threshold=90)}"
+    if surface_unknowns or deep_reasoning or mode == "deep-audit":
+        text += f"\n{SURFACE_UNKNOWNS_BLOCK}\n"
     if deep_reasoning or mode == "deep-audit":
         text += f"\n{FABLE5_REASONING_SCAFFOLD}\n"
     if focus_items:
@@ -924,6 +947,7 @@ def make(args: argparse.Namespace) -> int:
         target_ai=args.target_ai,
         environment=args.environment,
         deep_reasoning=getattr(args, "deep_reasoning", False),
+        surface_unknowns=getattr(args, "surface_unknowns", False),
         include_lessons=not getattr(args, "no_lessons", False),
     )
     return _apply_post_generation(prompt, args, config, f"{args.project} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
@@ -940,6 +964,7 @@ def make_adhoc(args: argparse.Namespace) -> int:
         target_ai=args.target_ai,
         environment=args.environment,
         deep_reasoning=getattr(args, "deep_reasoning", False),
+        surface_unknowns=getattr(args, "surface_unknowns", False),
         include_lessons=not getattr(args, "no_lessons", False),
     )
     return _apply_post_generation(prompt, args, config, f"adhoc / {args.type} / {args.mode} / {args.effort} / {args.target_ai} / {args.environment}")
@@ -1177,6 +1202,12 @@ def add_common_generation_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         dest="deep_reasoning",
         help="Inject the Fable 5 reasoning scaffold (assumption surfacing, evidence chains, adversarial pass, confidence calibration). Auto-enabled for --mode=deep-audit.",
+    )
+    parser.add_argument(
+        "--surface-unknowns",
+        action="store_true",
+        dest="surface_unknowns",
+        help="Inject a pre-scope unknown enumeration block (missing_information, assumptions_being_made, out_of_scope_risks, human_confirmation_needed). Aligns with Fable 5 'Finding Your Unknowns' pattern. Auto-included when --deep-reasoning or --mode=deep-audit is active.",
     )
     parser.add_argument("--dry-run", action="store_true", help="print without writing")
     parser.add_argument("--output", help="write prompt to a specific file")
